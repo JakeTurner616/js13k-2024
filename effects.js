@@ -15,7 +15,6 @@ export function makeBlood(pos, amount = 100) {
     emitter.trailScale = .8;
     emitter.fadeRate = 0.05;
 
-    emitter.particleDestroyCallback = persistentParticleDestroyCallback;
     return emitter;
 }
 
@@ -34,7 +33,6 @@ export function makeFire(pos, amount = 80) {
     emitter.trailScale = 0.1;
     emitter.fadeRate = 0.1;
 
-    emitter.particleDestroyCallback = persistentParticleDestroyCallback;
     return emitter;
 }
 
@@ -53,10 +51,6 @@ export function makeExplosion(pos, amount = 10) {
     emitter.trailScale = 0.2;
     emitter.fadeRate = 0.05;
 
-    emitter.particleDestroyCallback = persistentParticleDestroyCallback;
+    
     return emitter;
-}
-
-function persistentParticleDestroyCallback(particle) {
-    // Custom behavior for particle destruction (if needed)
 }

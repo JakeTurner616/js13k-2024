@@ -114,7 +114,7 @@ function gameRender() {
 
     if (gameState.gameOver) {
         
-        console.log("camnvas scale:" + cameraScale);
+        //console.log("camnvas scale:" + cameraScale);
     
         // Position the text in the middle of the screen
         drawTextScreen(

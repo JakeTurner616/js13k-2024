@@ -48,7 +48,7 @@ export class Bullet {
 
         // Calculate and print the angle
         const angle = Math.atan2(direction.y, direction.x);
-        console.log(`Bullet fired at angle: ${angle} radians`);
+        //console.log(`Bullet fired at angle: ${angle} radians`);
     }
 
     update() {

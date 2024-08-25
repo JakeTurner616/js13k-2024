@@ -20,7 +20,7 @@ export class Player {
 
     addItem(itemName) {
         this.items.push(itemName);
-        console.log(`Item added: ${itemName}`);
+        //console.log(`Item added: ${itemName}`);
         
         // Handle special cases for different items
         if (itemName === 'Shotgun' || itemName === 'Machine Gun') {
@@ -56,7 +56,7 @@ const halfVisibleHeight = (canvasHeight / 2) / cameraScale;
 this.pos.x = Math.max(-halfVisibleWidth, Math.min(this.pos.x, halfVisibleWidth));
 this.pos.y = Math.max(-halfVisibleHeight, Math.min(this.pos.y, halfVisibleHeight));
 
-console.log(`Constrained pos.x: ${this.pos.x}, pos.y: ${this.pos.y}`);
+//console.log(`Constrained pos.x: ${this.pos.x}, pos.y: ${this.pos.y}`);
 
 
         // Check collision with zombies

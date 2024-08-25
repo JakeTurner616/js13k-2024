@@ -22,5 +22,5 @@ export function adjustCanvasSize() { // Stretch map texture across canvas
     gameSettings.mapCanvas.width = window.innerWidth;
     gameSettings.mapCanvas.height = window.innerHeight;
     
-    console.log('Canvas size adjusted:', gameSettings.mapCanvas.width, gameSettings.mapCanvas.height);
+    //console.log('Canvas size adjusted:', gameSettings.mapCanvas.width, gameSettings.mapCanvas.height);
 }

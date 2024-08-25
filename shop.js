@@ -42,10 +42,10 @@ export function handleShopMouseClick() {
         screenMousePos.y >= textPos.y && screenMousePos.y <= textPos.y + textSize.y) {
 
         if (!isInShop()) {
-            console.log('Entering shop...');
+            //console.log('Entering shop...');
             enterShop();
         } else {
-            console.log('Exiting shop...');
+            //console.log('Exiting shop...');
             exitShop();
         }
     }
@@ -98,7 +98,7 @@ export function enterShop() {
 }
 
 export function exitShop() {
-    console.log('Exiting shop...');
+    //console.log('Exiting shop...');
     setInShop(false);
 }
 
