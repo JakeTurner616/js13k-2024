@@ -61,11 +61,11 @@ module.exports = {
         compiler.hooks.afterEmit.tapAsync('AfterBuildPlugin', async (compilation, callback) => {
           try {
             console.log('Running Closure Compiler...');
-            execSync('npx google-closure-compiler --js dist/bundle.js --js_output_file dist/bundle.cc.js --compilation_level ADVANCED --language_out ECMASCRIPT_2020 --externs externs.js');
+            execSync('npx google-closure-compiler --js dist/bundle.js --js_output_file dist/bundle.cc.js --compilation_level ADVANCED --language_out ECMASCRIPT_2020 --externs externs.js', { maxBuffer: 1024 * 1024 * 10 }); // Increase to 10MB
             console.log('Closure Compiler step complete.');
 
             console.log('Running UglifyJS...');
-            execSync('npx uglify-js dist/bundle.cc.js -o dist/bundle.min.js --compress --mangle');
+            execSync('npx uglify-js dist/bundle.cc.js -o dist/bundle.min.js --compress --mangle', { maxBuffer: 1024 * 1024 * 10 }); // Increase to 10MB
             console.log('UglifyJS step complete.');
 
             console.log('Running Roadroller...');

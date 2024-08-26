@@ -2,7 +2,7 @@ import { makeBlood, makeFire, makeExplosion } from './effects.js';
 import { sound_explode } from './sound.js';
 import { player } from './main.js';
 import { EXPLOSION_RADIUS, gameSettings } from './main.js';
-import { vec2, drawRect, hsl, Color, drawLine, PI} from './libs/littlejs.esm.min.js';
+import { vec2, drawRect, hsl, drawLine, PI } from './libs/littlejs.esm.min.js';
 export const gameState = {
     gameOver: false
 };
@@ -159,12 +159,12 @@ export class Boomer extends Zombie {
             if (!this.exploding) {
                 drawRect(this.pos, vec2(1, 1), hsl(0, 0, 0.2));
             } //else {
-                // Draw explosion radius coodinate plane for debugging and testing
-                //const explosionRadiusColor = new Color(0.6, 1, 0.5);
-                //drawLine(this.pos, this.pos.add(vec2(EXPLOSION_RADIUS, 0)), 0.1, explosionRadiusColor);
-                //drawLine(this.pos, this.pos.add(vec2(-EXPLOSION_RADIUS, 0)), 0.1, explosionRadiusColor);
-                //drawLine(this.pos, this.pos.add(vec2(0, EXPLOSION_RADIUS)), 0.1, explosionRadiusColor);
-                //drawLine(this.pos, this.pos.add(vec2(0, -EXPLOSION_RADIUS)), 0.1, explosionRadiusColor);
+            // Draw explosion radius coodinate plane for debugging and testing
+            //const explosionRadiusColor = new Color(0.6, 1, 0.5);
+            //drawLine(this.pos, this.pos.add(vec2(EXPLOSION_RADIUS, 0)), 0.1, explosionRadiusColor);
+            //drawLine(this.pos, this.pos.add(vec2(-EXPLOSION_RADIUS, 0)), 0.1, explosionRadiusColor);
+            //drawLine(this.pos, this.pos.add(vec2(0, EXPLOSION_RADIUS)), 0.1, explosionRadiusColor);
+            //drawLine(this.pos, this.pos.add(vec2(0, -EXPLOSION_RADIUS)), 0.1, explosionRadiusColor);
             //}
         } else {
             drawRect(this.pos, vec2(1, 1), hsl(0.6, 1, 0.5));
@@ -174,7 +174,7 @@ export class Boomer extends Zombie {
 export class DeadlyDangler extends Zombie {
     constructor(pos) {
         super(pos); // Call the parent class constructor first
-        
+
         // Initialize unique properties for DeadlyDangler
         this.tendrilLength = 2.5; // Length of the deadly tendrils
         this.legLength = 1.5; // Base length scale for tendrils
@@ -362,7 +362,7 @@ export class DeadlyDangler extends Zombie {
         const baseOffsetX = (1 / 2 + this.legThickness / 2) * side; // Move to left or right edge
         const baseOffsetY = (index - (this.numLegsPerSide - 1) / 2) * (1 / this.numLegsPerSide);
         const basePos = this.pos.add(vec2(baseOffsetX, baseOffsetY));
-    
+
         // Define lengths for each tendril segment based on anatomical parts
         const lengths = {
             coxa: this.legLength * 0.3,
@@ -374,11 +374,11 @@ export class DeadlyDangler extends Zombie {
             tarsus: this.legLength * 0.2,
             claws: this.legLength * 0.1,
         };
-    
+
         // Retrieve random factors for this tendril
         const legIndex = index + (side === 1 ? this.numLegsPerSide : 0);
         const { phaseShift, amplitudeVariation } = this.randomFactors[legIndex];
-    
+
         // Freeze direction towards the player upon death
         let targetAngle;
         if (!this.isDead) {
@@ -389,10 +389,10 @@ export class DeadlyDangler extends Zombie {
             // Maintain the last target angle before dying
             targetAngle = this.lastTargetAngle || 0;
         }
-    
+
         // Base angle movement for trailing tendril effect with added randomness
         const t = (this.time + index * this.legOffset + phaseShift) % (2 * PI);
-    
+
         // Angles for each segment, adjusted to point towards the player
         const angles = {
             coxa: targetAngle + Math.sin(t) * PI / 12 * side * amplitudeVariation,
@@ -404,10 +404,10 @@ export class DeadlyDangler extends Zombie {
             tarsus: targetAngle + Math.sin(t + PI) * PI / 12 * side * amplitudeVariation,
             claws: targetAngle + Math.sin(t + (5 * PI) / 4) * PI / 16 * side * amplitudeVariation,
         };
-    
+
         // Determine the tendril color based on whether the DeadlyDangler is dead
         const color = this.isDead ? hsl(0, 0, 0.2, opacity) : hsl(0, 1, 0.5, opacity); // Grey when dead, red otherwise
-    
+
         // Calculate positions for each segment's end point and draw them with fading effect
         let currentPos = basePos;
         for (const [key, length] of Object.entries(lengths)) {
@@ -416,7 +416,7 @@ export class DeadlyDangler extends Zombie {
             drawLine(currentPos, nextPos, this.legThickness, color); // Use the color variable with fading effect
             currentPos = nextPos; // Move to the next position
         }
-    
+
         // Store the last angle before death to maintain it after dying
         if (!this.isDead) {
             this.lastTargetAngle = targetAngle;
