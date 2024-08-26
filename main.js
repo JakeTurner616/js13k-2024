@@ -3,7 +3,7 @@
 import './libs/littlejs.esm.min.js';
 import { generateBiomeMap } from './biomeGenerator.js';
 import { Player } from './player.js';
-import { Zombie, Boomer,  gameState } from './zombie.js';
+import { Zombie, Boomer,  gameState, DeadlyDangler } from './zombie.js';
 import { setupBiomeCanvas, adjustCanvasSize, canvasState } from './CanvasUtils.js';
 import { handleShopMouseClick, handleShopInput, drawShop, isInShop } from './shop.js';
 import { getCurrency, getScore } from './bullet.js';
@@ -151,6 +151,10 @@ function spawnZombie() {
     if (isInShop()) {
         return;
     }
+    // dont spawn if game is over
+    if (gameState.gameOver) {
+        return;
+    }
 
     const halfCanvasWidth = (gameSettings.mapCanvas.width / 2) / cameraScale;
     const halfCanvasHeight = (gameSettings.mapCanvas.height / 2) / cameraScale;
@@ -173,9 +177,11 @@ function spawnZombie() {
             pos = vec2(-halfCanvasWidth - spawnMargin, rand(-halfCanvasHeight, halfCanvasHeight));
             break;
     }
-
-    if (rand() < 0.1) {
+    const randomValue = Math.random(); // Use Math.random() to get a random value between 0 and 1
+    if (randomValue < 0.1) {
         gameSettings.zombies.push(new Boomer(pos));
+    } else if (randomValue < 0.2) {
+        gameSettings.zombies.push(new DeadlyDangler(pos));
     } else {
         gameSettings.zombies.push(new Zombie(pos));
     }
