@@ -7,7 +7,7 @@ import { Zombie, Boomer,  gameState } from './zombie.js';
 import { setupBiomeCanvas, adjustCanvasSize, canvasState } from './CanvasUtils.js';
 import { handleShopMouseClick, handleShopInput, drawShop, isInShop } from './shop.js';
 import { getCurrency, getScore } from './bullet.js';
-import { vec2, engineInit,  cameraScale, rand, hsl, mouseWasPressed, drawTextScreen, mousePos } from './libs/littlejs.esm.min.js';
+import { vec2, engineInit,  cameraScale, rand, hsl, mouseWasPressed, drawTextScreen, mousePos, keyWasPressed } from './libs/littlejs.esm.min.js';
 
 
 export const gameSettings = {
