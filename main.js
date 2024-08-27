@@ -7,16 +7,28 @@ import { Zombie, Boomer,  gameState, DeadlyDangler } from './zombie.js';
 import { setupBiomeCanvas, adjustCanvasSize, canvasState } from './CanvasUtils.js';
 import { handleShopMouseClick, handleShopInput, drawShop, isInShop } from './shop.js';
 import { getCurrency, getScore } from './bullet.js';
-import { vec2, engineInit,  cameraScale, rand, hsl, mouseWasPressed, drawTextScreen, mousePos, keyWasPressed } from './libs/littlejs.esm.min.js';
+import { vec2, engineInit,  cameraScale, rand, hsl, mouseWasPressed, drawTextScreen, mousePos, keyWasPressed, setPaused } from './libs/littlejs.esm.min.js';
 
 
+let isWindowFocused = true; // Flag to check if window is focused
+
+// Event listener to set focus flag when window gains focus
+window.addEventListener('focus', () => {
+    isWindowFocused = true;
+    setPaused(false);
+});
+
+// Event listener to clear focus flag when window loses focus
+window.addEventListener('blur', () => {
+    isWindowFocused = false;
+    setPaused(true);     // Don't update the game loop when the window is not in focus. Prevents crashing the browser when the tab is focused again due to zombies spawning because of the tick counter.
+});
 export const gameSettings = {
     zombieSpeed: 0.02, // Initial speed of zombies
     spawnRate: 1400,
     zombies: [],
     bullets: [],
     mapCanvas: document.getElementById('mapCanvas'), // Export mapCanvas
-    
     mapCanvasSize: vec2(mapCanvas.width, mapCanvas.height), // Export mapCanvasSize
     mapCanvasWidth: mapCanvas.width,
     mapCanvasHeight: mapCanvas.height
@@ -102,9 +114,11 @@ function gameRender() {
     context.save();
     context.scale(1 / cameraScale, 1 / cameraScale);
 
-    player.render();
+    
     gameSettings.zombies.forEach(zombie => zombie.render());
     gameSettings.bullets.forEach(bullet => bullet.render());
+
+    player.render(); // layer the player over the zombies; looks more natural.
 
     context.restore();
 
@@ -133,12 +147,7 @@ function gameRenderPost() {
         drawTextScreen('Score: ' + getScore() + '  Currency: ' + getCurrency(), // getCurrency() 
             vec2(gameSettings.mapCanvas.width / 2, 70), 40,
             hsl(0, 0, 1), 6, hsl(0, 0, 0));
-
         const textPos = vec2(150, 70);
-        const textSize = vec2(200, 60);
-
-        
-
         if (!isInShop()) {
             drawTextScreen('Enter Shop', textPos, 30, hsl(0, 0, 1), 4, hsl(0, 0, 0));
         } else {
@@ -147,11 +156,18 @@ function gameRenderPost() {
     }
 }
 
+
 function spawnZombie() {
+    if (!isWindowFocused) {
+        //console.log('Window not in focus! skipping zombie spawn!');
+        return; // Don't spawn zombies if the window is not in focus
+    }
+
     if (isInShop()) {
         return;
     }
-    // dont spawn if game is over
+
+    // Don't spawn if the game is over
     if (gameState.gameOver) {
         return;
     }
@@ -161,7 +177,7 @@ function spawnZombie() {
 
     const spawnMargin = 2; // Distance outside the visible area where zombies will spawn
     const edge = Math.floor(Math.random() * 4);
-    let pos; // null
+    let pos;
 
     switch (edge) {
         case 0: // Top edge
@@ -177,6 +193,7 @@ function spawnZombie() {
             pos = vec2(-halfCanvasWidth - spawnMargin, rand(-halfCanvasHeight, halfCanvasHeight));
             break;
     }
+    // Enemy spawn chances
     const randomValue = Math.random(); // Use Math.random() to get a random value between 0 and 1
     if (randomValue < 0.1) {
         gameSettings.zombies.push(new Boomer(pos));

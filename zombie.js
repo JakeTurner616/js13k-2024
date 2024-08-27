@@ -18,24 +18,25 @@ export class Zombie {
         this.pos = pos;
         this.speed = gameSettings.zombieSpeed;
         this.isDead = false;
-        this.deathTimer = 0;
         this.frozen = false;
         this.onFire = false;
         this.fireEmitter = null;
-        this.fadeOutTimer = 4;
+        this.fadeOutTimer = 0; // Timer for fade-out, starts after contagious period
+        this.fireSpreadTimer = 2; // Timer for controlling fire spread duration (2 seconds by default)
 
         // Arm properties for zombie-like movement
         this.armLength = 1.2 + (Math.random() * 0.4); // Total length of each arm with random variation
         this.armThickness = 0.1; // Thickness of the arms
         this.armOscillationSpeed = 0.016 + (Math.random() * 0.02); // Speed of arm movement
         this.time = (Math.random() * 0.4); // Time to control animation
-        // Ensure min and max arm angles have a meaningful difference
-        this.minArmAngle = (Math.random() * PI / 16) + PI / 12; // Randomized minimum angle for arm swing
-        this.maxArmAngle = this.minArmAngle + (Math.random() * PI / 18) + PI / 18;  // Reduced maximum angle to make sway more subtle
+
+        // Randomized arm movement limits for each zombie
+        this.minArmAngle = (Math.random() * Math.PI / 16) + Math.PI / 12; // Randomized minimum angle for arm swing
+        this.maxArmAngle = this.minArmAngle + (Math.random() * Math.PI / 18) + Math.PI / 18;  // Reduced maximum angle to make sway more subtle
 
         // Randomized delay for arm movement to prevent synchronization
-        this.armDelay = Math.random() * PI; // Random delay to stagger arm movement
-        this.frameDelay = Math.floor(Math.random() * 50) + 10; // Random frame delay between 10 to 30 frames
+        this.armDelay = Math.random() * Math.PI; // Random delay to stagger arm movement
+        this.frameDelay = Math.floor(Math.random() * 20) + 10; // Random frame delay between 10 to 30 frames
 
         // Frozen arm positions upon death
         this.frozenLeftArm = null;
@@ -53,21 +54,69 @@ export class Zombie {
             }, 3000);
         }
 
-        if (this.onFire && !this.isDead) {
-            this.isDead = true;
-            this.fireEmitter = makeFire(this.pos);
-
-            gameSettings.zombies.forEach(otherZombie => {
-                if (!otherZombie.isDead && this.pos.distance(otherZombie.pos) < 1 && !otherZombie.onFire) {
-                    otherZombie.onFire = true;
-                }
-            });
-
-            this.startFadeOut();
+        if (this.onFire) {
+            this.handleFireState(); // Handle fire spreading and eventually fading out
+        } else {
+            this.checkFireSpread(); // Check if this zombie should catch fire from another onFire zombie
+            this.moveTowardsPlayer(); // Move towards the player if not on fire
         }
+    }
 
-        if (!this.isDead) {
-            // Decrement the frame delay counter before starting the animation
+    handleFireState() {
+        // If the zombie is on fire, manage the fire spreading and eventually start fading out
+        if (this.fireSpreadTimer > 0) {
+            this.spreadFire();  // Spread fire if the fire spread timer is active
+            this.fireSpreadTimer -= 1 / 60;  // Decrement the fire spread timer each frame
+        } else {
+            // Fire spreading period is over, start fade out
+            if (this.fadeOutTimer > 0) {
+                this.fadeOutTimer -= 1 / 60;  // Decrement the fade-out timer each frame
+                if (this.fadeOutTimer <= 0) {
+                    this.isDead = true; // Zombie is dead after fade-out completes
+                    if (this.fireEmitter) {
+                        this.fireEmitter.emitRate = 0; // Stop fire effects when zombie is fully dead
+                    }
+                }
+            } else if (this.fadeOutTimer === 0) {
+                this.startFadeOut(); // Start fade-out if it's not started yet
+            }
+        }
+    }
+
+    checkFireSpread() {
+        // Check if this zombie should catch fire from another onFire zombie
+        gameSettings.zombies.forEach(otherZombie => {
+            if (otherZombie !== this && otherZombie.onFire && !this.onFire && !this.isDead) {
+                if (this.pos.distance(otherZombie.pos) < 1) {
+                    this.catchFire(); // Zombie catches fire when colliding with a burning zombie
+                }
+            }
+        });
+    }
+
+    catchFire() {
+        if (!this.onFire) { // Ensure we only trigger this once
+            this.onFire = true;
+            this.fireEmitter = makeFire(this.pos);  // Start the fire effect
+            this.fireSpreadTimer = 2;  // Fire spread timer set for 2 seconds
+            this.speed = 0; // Stop the zombie from moving when it's on fire
+        }
+    }
+
+    spreadFire() {
+        // Spread fire to nearby zombies if they are close enough to this burning zombie
+        gameSettings.zombies.forEach(otherZombie => {
+            if (otherZombie !== this && !otherZombie.isDead && !otherZombie.onFire) {
+                if (this.pos.distance(otherZombie.pos) < 1) {
+                    otherZombie.catchFire();  // Trigger the catchFire method for the nearby zombie
+                }
+            }
+        });
+    }
+
+    moveTowardsPlayer() {
+        // If the zombie is not dead or on fire, it moves towards the player
+        if (!this.isDead && !this.onFire) {
             if (this.frameDelay > 0) {
                 this.frameDelay--;
             } else {
@@ -80,21 +129,9 @@ export class Zombie {
             this.pos = this.pos.add(direction.scale(this.speed));
 
             if (this.pos.distance(player.pos) < 1) {
-                setGameOver(true); // Use setGameOver() instead of direct assignment
-            }
-        } else {
-            if (this.fadeOutTimer > 0) {
-                this.fadeOutTimer -= 1 / 60;
-                if (this.fadeOutTimer <= 0) {
-                    this.deathTimer = 0;
-                    if (this.fireEmitter) this.fireEmitter.emitRate = 0;
-                }
+                setGameOver(true); // Trigger game over when zombie reaches the player
             }
         }
-    }
-
-    startFadeOut() {
-        this.fadeOutTimer = 4;
     }
 
     avoidCollisions() {
@@ -108,14 +145,15 @@ export class Zombie {
 
     render() {
         let opacity = 1;
-        if (this.fadeOutTimer > 0) {
+        if (this.onFire && this.fireSpreadTimer <= 0) {
+            // Start fading only after contagious period is over
             opacity = this.fadeOutTimer / 4;
         }
 
-        if (this.isDead && this.onFire) {
-            drawRect(this.pos, vec2(1, 1), hsl(0.1, 1, 0.5, opacity));
-        } else if (this.isDead) {
+        if (this.isDead) {
             drawRect(this.pos, vec2(1, 1), hsl(0, 0, 0.2, opacity));
+        } else if (this.onFire) {
+            drawRect(this.pos, vec2(1, 1), hsl(0.1, 1, 0.5, opacity)); // Draw burning zombie
         } else if (this.frozen) {
             drawRect(this.pos, vec2(1, 1), hsl(0.6, 1, 1));
         } else {
@@ -151,7 +189,7 @@ export class Zombie {
         const angleToPlayer = Math.atan2(directionToPlayer.y, directionToPlayer.x);
 
         // Adjust the base position for the arms to track the player
-        const armBaseOffset = vec2(Math.cos(angleToPlayer + PI / 2 * side), Math.sin(angleToPlayer + PI / 2 * side)).scale(0.5);
+        const armBaseOffset = vec2(Math.cos(angleToPlayer + Math.PI / 2 * side), Math.sin(angleToPlayer + Math.PI / 2 * side)).scale(0.5);
         const basePos = this.pos.add(armBaseOffset);
 
         // Lengths of each arm segment
@@ -160,7 +198,7 @@ export class Zombie {
 
         // Oscillate arm angles to create a zombie-like staggered effect
         const upperArmAngle = angleToPlayer + Math.sin(this.time + this.armDelay) * (this.maxArmAngle - this.minArmAngle);
-        const forearmAngle = upperArmAngle + Math.sin(this.time + this.armDelay + PI / 4) * (this.maxArmAngle - this.minArmAngle);
+        const forearmAngle = upperArmAngle + Math.sin(this.time + this.armDelay + Math.PI / 4) * (this.maxArmAngle - this.minArmAngle);
 
         // Calculate end position of the upper arm
         const upperArmEnd = basePos.add(vec2(Math.cos(upperArmAngle), Math.sin(upperArmAngle)).scale(upperArmLength));
@@ -177,7 +215,16 @@ export class Zombie {
             this.frozenLeftArm = { upperStart: basePos, upperEnd: upperArmEnd, foreEnd: forearmEnd };
         }
     }
+
+    startFadeOut() {
+        // Start the fade-out process
+        this.fadeOutTimer = 4; // Set the fade-out timer to 4 seconds after the contagious period ends
+    }
 }
+
+
+
+
 
 
 export class Boomer extends Zombie {
@@ -225,11 +272,47 @@ export class Boomer extends Zombie {
                 this.freezeArms(); // Freeze arms when Boomer starts exploding
                 setTimeout(() => {
                     this.explode();
-                }, 2000);
+                }, 2000); // Explosion delay after death
             }
-            this.deathTimer -= 1 / 60;
-            this.bombFlickerEffect();
         }
+    }
+
+    handleFireState() {
+        // If the Boomer is on fire, manage the fire spreading and explosion
+        if (this.fireSpreadTimer > 0) {
+            this.spreadFire();  // Spread fire if the fire spread timer is active
+            this.fireSpreadTimer -= 1 / 60;  // Decrement the fire spread timer each frame
+        } else if (!this.isDead && this.onFire) {
+            // After contagious period, Boomer should explode if it's on fire
+            this.isDead = true;
+            this.explode();
+        }
+    }
+
+    explode() {
+        this.bloodEmitter = makeBlood(this.pos, 10);
+        this.explosionEmitter = makeExplosion(this.pos, 200);
+        sound_explode.play(this.pos);
+
+        // Affect all zombies within the explosion radius
+        gameSettings.zombies.forEach(zombie => {
+            if (this.pos.distance(zombie.pos) < EXPLOSION_RADIUS) {
+                if (zombie !== this && !zombie.isDead) {
+                    zombie.catchFire(); // Set nearby zombies on fire instead of killing them
+                }
+            }
+        });
+
+        if (this.pos.distance(player.pos) < EXPLOSION_RADIUS) {
+            setGameOver(true); // End game if player is within explosion radius
+        }
+
+        setTimeout(() => {
+            if (this.bloodEmitter) this.bloodEmitter.emitRate = 0;
+            if (this.explosionEmitter) this.explosionEmitter.emitRate = 0;
+        }, 1000);
+
+        this.deathTimer = 0;
     }
 
     freezeArms() {
@@ -263,39 +346,44 @@ export class Boomer extends Zombie {
     }
 
     render() {
+        let color;
         if (this.isDead) {
-            if (!this.exploding) {
-                drawRect(this.pos, vec2(1, 1), hsl(0, 0, 0.2));
-                this.renderArms(hsl(0, 0, 0.2)); // Render arms normally until the explosion
+            if (this.exploding) {
+                this.bombFlickerEffect(); // Flicker effect during explosion
+                return;
             } else {
-                this.bombFlickerEffect();
+                color = hsl(0, 0, 0.2); // Grey color when dead and not yet exploded
             }
+        } else if (this.onFire) {
+            color = hsl(0.1, 1, 0.5); // Burning color
         } else {
-            drawRect(this.pos, vec2(1, 1), hsl(0.6, 1, 0.5));
-            this.renderArms(hsl(0.6, 1, 0.5)); // Ensure arms are rendered during normal state
+            color = hsl(0.6, 1, 0.5); // Normal Boomer color
         }
+
+        drawRect(this.pos, vec2(1, 1), color);
+        this.renderArms(color); // Render arms with appropriate color
     }
 
-    renderArms(flickerColor) {
+    renderArms(color) {
         if (this.isDead && this.exploding) {
             // Flash arms with the body
-            this.drawFrozenArm(this.frozenLeftArm, flickerColor);
-            this.drawFrozenArm(this.frozenRightArm, flickerColor);
+            this.drawFrozenArm(this.frozenLeftArm, color);
+            this.drawFrozenArm(this.frozenRightArm, color);
         } else if (this.isDead) {
             // If Boomer is dead but not exploded yet, use frozen arm positions
-            this.drawFrozenArm(this.frozenLeftArm, flickerColor);
-            this.drawFrozenArm(this.frozenRightArm, flickerColor);
+            this.drawFrozenArm(this.frozenLeftArm, color);
+            this.drawFrozenArm(this.frozenRightArm, color);
         } else {
             // If Boomer is alive, animate arms
-            this.drawArm(1, flickerColor);  // Right arm
-            this.drawArm(-1, flickerColor); // Left arm
+            this.drawArm(1, color);  // Right arm
+            this.drawArm(-1, color); // Left arm
         }
     }
 
-    drawFrozenArm(arm, flickerColor) {
+    drawFrozenArm(arm, color) {
         if (arm) {
-            drawLine(arm.upperStart, arm.upperEnd, this.armThickness, flickerColor); // Use flicker color
-            drawLine(arm.upperEnd, arm.foreEnd, this.armThickness, flickerColor);
+            drawLine(arm.upperStart, arm.upperEnd, this.armThickness, color); // Use the color for the frozen arm
+            drawLine(arm.upperEnd, arm.foreEnd, this.armThickness, color);
         }
     }
 

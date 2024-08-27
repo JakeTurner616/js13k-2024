@@ -8,7 +8,12 @@ let selectedItem = 0; // Private variable
 export function isInShop() {
     return inShop;
 }
-
+const items = [
+    { name: 'Shotgun', cost: 10 },
+    { name: 'Machine Gun', cost: 10 },
+    { name: 'Fire Ability', cost: 5 },
+    { name: 'Ice Ability', cost: 5 }
+];
 export function setInShop(status) {
     inShop = status;
     if (status) {
@@ -52,12 +57,6 @@ export function handleShopMouseClick() {
 }
 
 export function handleShopInput() {
-    const items = [
-        { name: 'Shotgun', cost: 10 },
-        { name: 'Machine Gun', cost: 10 },
-        { name: 'Fire Ability', cost: 5 },
-        { name: 'Ice Ability', cost: 5 }
-    ];
 
     if (keyWasPressed('ArrowUp')) {
         setSelectedItem((getSelectedItem() - 1 + items.length) % items.length);
@@ -74,12 +73,7 @@ export function handleShopInput() {
 }
 
 export function drawShop() {
-    const items = [
-        { name: 'Shotgun', cost: 10 },
-        { name: 'Machine Gun', cost: 10 },
-        { name: 'Fire Ability', cost: 5 },
-        { name: 'Ice Ability', cost: 5 }
-    ];
+
 
     drawRect(vec2(mainCanvas.width / 2, mainCanvas.height / 2), vec2(300, 400), hsl(0, 0, .2), 10, hsl(0, 0, .5));
 
