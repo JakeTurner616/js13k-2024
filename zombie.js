@@ -12,6 +12,7 @@ export function setGameOver(value) {
     return gameState.gameOver;
 }
 
+
 export class Zombie {
     constructor(pos) {
         this.pos = pos;
@@ -22,6 +23,23 @@ export class Zombie {
         this.onFire = false;
         this.fireEmitter = null;
         this.fadeOutTimer = 4;
+
+        // Arm properties for zombie-like movement
+        this.armLength = 1.2 + (Math.random() * 0.4); // Total length of each arm with random variation
+        this.armThickness = 0.1; // Thickness of the arms
+        this.armOscillationSpeed = 0.016 + (Math.random() * 0.02); // Speed of arm movement
+        this.time = (Math.random() * 0.4); // Time to control animation
+        // Ensure min and max arm angles have a meaningful difference
+        this.minArmAngle = (Math.random() * PI / 16) + PI / 12; // Randomized minimum angle for arm swing
+        this.maxArmAngle = this.minArmAngle + (Math.random() * PI / 18) + PI / 18;  // Reduced maximum angle to make sway more subtle
+
+        // Randomized delay for arm movement to prevent synchronization
+        this.armDelay = Math.random() * PI; // Random delay to stagger arm movement
+        this.frameDelay = Math.floor(Math.random() * 50) + 10; // Random frame delay between 10 to 30 frames
+
+        // Frozen arm positions upon death
+        this.frozenLeftArm = null;
+        this.frozenRightArm = null;
     }
 
     update() {
@@ -29,7 +47,10 @@ export class Zombie {
 
         if (this.frozen) {
             this.speed = 0;
-            setTimeout(() => { this.frozen = false; this.speed = gameSettings.zombieSpeed; }, 3000);
+            setTimeout(() => {
+                this.frozen = false;
+                this.speed = gameSettings.zombieSpeed;
+            }, 3000);
         }
 
         if (this.onFire && !this.isDead) {
@@ -46,6 +67,13 @@ export class Zombie {
         }
 
         if (!this.isDead) {
+            // Decrement the frame delay counter before starting the animation
+            if (this.frameDelay > 0) {
+                this.frameDelay--;
+            } else {
+                this.time += this.armOscillationSpeed; // Update time for arm animation after delay
+            }
+
             this.avoidCollisions();
 
             const direction = player.pos.subtract(this.pos).normalize();
@@ -93,8 +121,64 @@ export class Zombie {
         } else {
             drawRect(this.pos, vec2(1, 1), hsl(0.3, 1, 0.5));
         }
+
+        // Draw arms with zombie-like movement
+        this.renderArms(opacity);
+    }
+
+    renderArms(opacity) {
+        if (this.isDead) {
+            // If zombie is dead, use frozen arm positions
+            this.drawFrozenArm(this.frozenLeftArm, opacity);
+            this.drawFrozenArm(this.frozenRightArm, opacity);
+        } else {
+            // If zombie is alive, animate arms
+            this.drawArm(1, opacity);  // Right arm
+            this.drawArm(-1, opacity); // Left arm
+        }
+    }
+
+    drawFrozenArm(arm, opacity) {
+        if (arm) {
+            drawLine(arm.upperStart, arm.upperEnd, this.armThickness, hsl(0, 0, 0.2, opacity)); // Grey color for dead zombie arms
+            drawLine(arm.upperEnd, arm.foreEnd, this.armThickness, hsl(0, 0, 0.2, opacity));
+        }
+    }
+
+    drawArm(side, opacity) {
+        // Calculate direction to player
+        const directionToPlayer = player.pos.subtract(this.pos).normalize();
+        const angleToPlayer = Math.atan2(directionToPlayer.y, directionToPlayer.x);
+
+        // Adjust the base position for the arms to track the player
+        const armBaseOffset = vec2(Math.cos(angleToPlayer + PI / 2 * side), Math.sin(angleToPlayer + PI / 2 * side)).scale(0.5);
+        const basePos = this.pos.add(armBaseOffset);
+
+        // Lengths of each arm segment
+        const upperArmLength = this.armLength * 0.5;
+        const forearmLength = this.armLength * 0.5;
+
+        // Oscillate arm angles to create a zombie-like staggered effect
+        const upperArmAngle = angleToPlayer + Math.sin(this.time + this.armDelay) * (this.maxArmAngle - this.minArmAngle);
+        const forearmAngle = upperArmAngle + Math.sin(this.time + this.armDelay + PI / 4) * (this.maxArmAngle - this.minArmAngle);
+
+        // Calculate end position of the upper arm
+        const upperArmEnd = basePos.add(vec2(Math.cos(upperArmAngle), Math.sin(upperArmAngle)).scale(upperArmLength));
+        drawLine(basePos, upperArmEnd, this.armThickness, hsl(0.3, 1, 0.5, opacity)); // Draw upper arm in green
+
+        // Calculate end position of the forearm
+        const forearmEnd = upperArmEnd.add(vec2(Math.cos(forearmAngle), Math.sin(forearmAngle)).scale(forearmLength));
+        drawLine(upperArmEnd, forearmEnd, this.armThickness, hsl(0.3, 1, 0.5, opacity)); // Draw forearm in green
+
+        // Save arm positions for freezing upon death
+        if (side === 1) {
+            this.frozenRightArm = { upperStart: basePos, upperEnd: upperArmEnd, foreEnd: forearmEnd };
+        } else {
+            this.frozenLeftArm = { upperStart: basePos, upperEnd: upperArmEnd, foreEnd: forearmEnd };
+        }
     }
 }
+
 
 export class Boomer extends Zombie {
     constructor(pos) {
@@ -103,16 +187,42 @@ export class Boomer extends Zombie {
         this.exploding = false;
         this.bloodEmitter = null;
         this.explosionEmitter = null;
+
+        // Arm properties for Boomer-like movement
+        this.armLength = 1.2 + (Math.random() * 0.4); // Total length of each arm with random variation
+        this.armThickness = 0.1; // Thickness of the arms
+        this.armOscillationSpeed = 0.016 + (Math.random() * 0.02); // Speed of arm movement
+        this.time = (Math.random() * 0.4); // Time to control animation
+
+        // Ensure min and max arm angles have a meaningful difference
+        this.minArmAngle = (Math.random() * PI / 16) + PI / 12; // Randomized minimum angle for arm swing
+        this.maxArmAngle = this.minArmAngle + (Math.random() * PI / 18) + PI / 18;  // Reduced maximum angle to make sway more subtle
+
+        // Randomized delay for arm movement to prevent synchronization
+        this.armDelay = Math.random() * PI; // Random delay to stagger arm movement
+        this.frameDelay = Math.floor(Math.random() * 20) + 10; // Random frame delay between 10 to 30 frames
+
+        // Frozen arm positions upon death
+        this.frozenLeftArm = null;
+        this.frozenRightArm = null;
     }
 
     update() {
         if (gameState.gameOver) return;
 
         if (!this.isDead) {
+            // Decrement the frame delay counter before starting the animation
+            if (this.frameDelay > 0) {
+                this.frameDelay--;
+            } else {
+                this.time += this.armOscillationSpeed; // Update time for arm animation after delay
+            }
+
             super.update();
         } else {
             if (!this.exploding) {
                 this.exploding = true;
+                this.freezeArms(); // Freeze arms when Boomer starts exploding
                 setTimeout(() => {
                     this.explode();
                 }, 2000);
@@ -122,10 +232,113 @@ export class Boomer extends Zombie {
         }
     }
 
+    freezeArms() {
+        // Freeze the current positions of the arms when Boomer is shot and starts to explode
+        this.frozenLeftArm = this.getCurrentArmPosition(-1);
+        this.frozenRightArm = this.getCurrentArmPosition(1);
+    }
+
+    getCurrentArmPosition(side) {
+        // Calculate direction to player
+        const directionToPlayer = player.pos.subtract(this.pos).normalize();
+        const angleToPlayer = Math.atan2(directionToPlayer.y, directionToPlayer.x);
+
+        // Adjust the base position for the arms to track the player
+        const armBaseOffset = vec2(Math.cos(angleToPlayer + PI / 2 * side), Math.sin(angleToPlayer + PI / 2 * side)).scale(0.5);
+        const basePos = this.pos.add(armBaseOffset);
+
+        // Lengths of each arm segment
+        const upperArmLength = this.armLength * 0.5;
+        const forearmLength = this.armLength * 0.5;
+
+        // Oscillate arm angles to create a zombie-like staggered effect
+        const upperArmAngle = angleToPlayer + Math.sin(this.time + this.armDelay) * (this.maxArmAngle - this.minArmAngle);
+        const forearmAngle = upperArmAngle + Math.sin(this.time + this.armDelay + PI / 4) * (this.maxArmAngle - this.minArmAngle);
+
+        // Calculate end position of the upper arm
+        const upperArmEnd = basePos.add(vec2(Math.cos(upperArmAngle), Math.sin(upperArmAngle)).scale(upperArmLength));
+        const forearmEnd = upperArmEnd.add(vec2(Math.cos(forearmAngle), Math.sin(forearmAngle)).scale(forearmLength));
+
+        return { upperStart: basePos, upperEnd: upperArmEnd, foreEnd: forearmEnd };
+    }
+
+    render() {
+        if (this.isDead) {
+            if (!this.exploding) {
+                drawRect(this.pos, vec2(1, 1), hsl(0, 0, 0.2));
+                this.renderArms(hsl(0, 0, 0.2)); // Render arms normally until the explosion
+            } else {
+                this.bombFlickerEffect();
+            }
+        } else {
+            drawRect(this.pos, vec2(1, 1), hsl(0.6, 1, 0.5));
+            this.renderArms(hsl(0.6, 1, 0.5)); // Ensure arms are rendered during normal state
+        }
+    }
+
+    renderArms(flickerColor) {
+        if (this.isDead && this.exploding) {
+            // Flash arms with the body
+            this.drawFrozenArm(this.frozenLeftArm, flickerColor);
+            this.drawFrozenArm(this.frozenRightArm, flickerColor);
+        } else if (this.isDead) {
+            // If Boomer is dead but not exploded yet, use frozen arm positions
+            this.drawFrozenArm(this.frozenLeftArm, flickerColor);
+            this.drawFrozenArm(this.frozenRightArm, flickerColor);
+        } else {
+            // If Boomer is alive, animate arms
+            this.drawArm(1, flickerColor);  // Right arm
+            this.drawArm(-1, flickerColor); // Left arm
+        }
+    }
+
+    drawFrozenArm(arm, flickerColor) {
+        if (arm) {
+            drawLine(arm.upperStart, arm.upperEnd, this.armThickness, flickerColor); // Use flicker color
+            drawLine(arm.upperEnd, arm.foreEnd, this.armThickness, flickerColor);
+        }
+    }
+
+    drawArm(side, color) {
+        // Calculate direction to player
+        const directionToPlayer = player.pos.subtract(this.pos).normalize();
+        const angleToPlayer = Math.atan2(directionToPlayer.y, directionToPlayer.x);
+
+        // Adjust the base position for the arms to track the player
+        const armBaseOffset = vec2(Math.cos(angleToPlayer + PI / 2 * side), Math.sin(angleToPlayer + PI / 2 * side)).scale(0.5);
+        const basePos = this.pos.add(armBaseOffset);
+
+        // Lengths of each arm segment
+        const upperArmLength = this.armLength * 0.5;
+        const forearmLength = this.armLength * 0.5;
+
+        // Oscillate arm angles to create a boomer-like staggered effect
+        const upperArmAngle = angleToPlayer + Math.sin(this.time + this.armDelay) * (this.maxArmAngle - this.minArmAngle);
+        const forearmAngle = upperArmAngle + Math.sin(this.time + this.armDelay + PI / 4) * (this.maxArmAngle - this.minArmAngle);
+
+        // Calculate end position of the upper arm
+        const upperArmEnd = basePos.add(vec2(Math.cos(upperArmAngle), Math.sin(upperArmAngle)).scale(upperArmLength));
+        drawLine(basePos, upperArmEnd, this.armThickness, color); // Draw upper arm
+
+        // Calculate end position of the forearm
+        const forearmEnd = upperArmEnd.add(vec2(Math.cos(forearmAngle), Math.sin(forearmAngle)).scale(forearmLength));
+        drawLine(upperArmEnd, forearmEnd, this.armThickness, color); // Draw forearm
+
+        // Save arm positions for freezing upon death
+        if (side === 1) {
+            this.frozenRightArm = { upperStart: basePos, upperEnd: upperArmEnd, foreEnd: forearmEnd };
+        } else {
+            this.frozenLeftArm = { upperStart: basePos, upperEnd: upperArmEnd, foreEnd: forearmEnd };
+        }
+    }
+
     bombFlickerEffect() {
         if (this.exploding) {
             const flickerColor = Math.random() > 0.5 ? hsl(0.6, 1, 0.5) : hsl(0, 0, 0.2);
             drawRect(this.pos, vec2(1, 1), flickerColor);
+            // Flash the frozen arms with the body
+            this.drawFrozenArm(this.frozenLeftArm, flickerColor);
+            this.drawFrozenArm(this.frozenRightArm, flickerColor);
         }
     }
 
@@ -152,23 +365,6 @@ export class Boomer extends Zombie {
         }, 1000);
 
         this.deathTimer = 0;
-    }
-
-    render() {
-        if (this.isDead) {
-            if (!this.exploding) {
-                drawRect(this.pos, vec2(1, 1), hsl(0, 0, 0.2));
-            } //else {
-            // Draw explosion radius coodinate plane for debugging and testing
-            //const explosionRadiusColor = new Color(0.6, 1, 0.5);
-            //drawLine(this.pos, this.pos.add(vec2(EXPLOSION_RADIUS, 0)), 0.1, explosionRadiusColor);
-            //drawLine(this.pos, this.pos.add(vec2(-EXPLOSION_RADIUS, 0)), 0.1, explosionRadiusColor);
-            //drawLine(this.pos, this.pos.add(vec2(0, EXPLOSION_RADIUS)), 0.1, explosionRadiusColor);
-            //drawLine(this.pos, this.pos.add(vec2(0, -EXPLOSION_RADIUS)), 0.1, explosionRadiusColor);
-            //}
-        } else {
-            drawRect(this.pos, vec2(1, 1), hsl(0.6, 1, 0.5));
-        }
     }
 }
 export class DeadlyDangler extends Zombie {
