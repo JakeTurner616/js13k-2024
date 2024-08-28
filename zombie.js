@@ -21,7 +21,7 @@ export class Zombie {
         this.frozen = false;
         this.onFire = false;
         this.fireEmitter = null;
-        this.fadeOutTimer = 0; // Timer for fade-out, starts after contagious period
+        this.fadeOutTimer = 3; // Timer for fade-out, starts after contagious period or upon death
         this.fireSpreadTimer = 2; // Timer for controlling fire spread duration (2 seconds by default)
 
         // Arm properties for zombie-like movement
@@ -54,11 +54,29 @@ export class Zombie {
             }, 3000);
         }
 
-        if (this.onFire) {
+        if (this.isDead) {
+            this.handleDeathFadeOut(); // Handle fading out when zombie is dead
+        } else if (this.onFire) {
             this.handleFireState(); // Handle fire spreading and eventually fading out
         } else {
             this.checkFireSpread(); // Check if this zombie should catch fire from another onFire zombie
-            this.moveTowardsPlayer(); // Move towards the player if not on fire
+            this.moveTowardsPlayer(); // Move towards the player if not on fire or dead
+        }
+    }
+
+    handleDeathFadeOut() {
+        // Handle the fade-out process when the zombie is dead
+        if (this.fadeOutTimer > 0) {
+            this.fadeOutTimer -= 1 / 60;  // Decrement the fade-out timer each frame
+            if (this.fadeOutTimer <= 0) {
+                // Fully fade out and remove zombie
+                this.isDead = true; // Zombie is considered fully dead when fade-out completes
+                if (this.fireEmitter) {
+                    this.fireEmitter.emitRate = 0; // Stop fire effects if present
+                }
+            }
+        } else if (this.fadeOutTimer === 0) {
+            this.startFadeOut(); // Start fade-out if it's not started yet
         }
     }
 
@@ -68,7 +86,7 @@ export class Zombie {
             this.spreadFire();  // Spread fire if the fire spread timer is active
             this.fireSpreadTimer -= 1 / 60;  // Decrement the fire spread timer each frame
         } else {
-            // Fire spreading period is over, start fade out
+            // Start fade out after the fire spreading period ends without a flash
             if (this.fadeOutTimer > 0) {
                 this.fadeOutTimer -= 1 / 60;  // Decrement the fade-out timer each frame
                 if (this.fadeOutTimer <= 0) {
@@ -145,7 +163,10 @@ export class Zombie {
 
     render() {
         let opacity = 1;
-        if (this.onFire && this.fireSpreadTimer <= 0) {
+        if (this.isDead) {
+            // Start fading only after contagious period or upon normal death
+            opacity = this.fadeOutTimer / 4;
+        } else if (this.onFire && this.fireSpreadTimer <= 0) {
             // Start fading only after contagious period is over
             opacity = this.fadeOutTimer / 4;
         }
@@ -169,6 +190,7 @@ export class Zombie {
             // If zombie is dead, use frozen arm positions
             this.drawFrozenArm(this.frozenLeftArm, opacity);
             this.drawFrozenArm(this.frozenRightArm, opacity);
+            
         } else {
             // If zombie is alive, animate arms
             this.drawArm(1, opacity);  // Right arm
@@ -218,9 +240,10 @@ export class Zombie {
 
     startFadeOut() {
         // Start the fade-out process
-        this.fadeOutTimer = 4; // Set the fade-out timer to 4 seconds after the contagious period ends
+        this.fadeOutTimer = 4; // Set the fade-out timer to 4 seconds after death
     }
 }
+
 
 
 

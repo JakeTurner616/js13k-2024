@@ -14,7 +14,9 @@ export class Player {
         this.iceAbility = false;
         this.isAutomatic = false; // Indicates if bullets are fired automatically
         this.lastShootTime = 0; // Last time the player shot
-        this.shootDelay = Math.floor(Math.random() * (200 - 100 + 1)) + 100;
+        this.shootDelay = 0;
+        this.machineGunShootDelay = 500; // Machine Gun specific shoot delay
+        this.shotgunShootDelay = 700; // Shotgun specific shoot delay
 
         this.magazineSize = 13; // Magazine size set to 13 to fit the Triskaidekaphobia theme
         this.currentAmmo = this.magazineSize; // Start with a full magazine
@@ -35,8 +37,21 @@ export class Player {
         this.items.push(itemName);
         
         // Handle special cases for different items
-        if (itemName === 'Shotgun' || itemName === 'Machine Gun') {
+        if (itemName === 'Shotgun') {
             this.weapon = itemName;
+            // Shotgun can be automatic if both "Shotgun" and "Machine Gun" are purchased
+            this.isAutomatic = this.items.includes('Machine Gun');
+            this.shootDelay = this.shotgunShootDelay; // Set shoot delay for Shotgun
+        } else if (itemName === 'Machine Gun') {
+            this.weapon = itemName;
+            this.isAutomatic = true; // Machine Gun is always automatic
+            this.shootDelay = this.machineGunShootDelay; // Use machine gun specific shoot delay
+            // If the player already has a Shotgun, set it to automatic as well
+            if (this.items.includes('Shotgun')) {
+                this.weapon = 'Shotgun'; // Prioritize the Shotgun if already equipped
+                this.isAutomatic = true; // Ensure automatic firing mode is enabled for the shotgun as well
+                this.shootDelay = this.shotgunShootDelay; // Use shotgun-specific delay for automatic shotgun
+            }
         } else if (itemName === 'Fire Ability') {
             this.fireAbility = true;
         } else if (itemName === 'Ice Ability') {
@@ -46,19 +61,19 @@ export class Player {
 
     update() {
         if (setGameOver(false) || isInShop()) return;
-
+    
         // Player movement logic
         const moveSpeed = 0.1;
         if (keyIsDown('ArrowLeft')) this.pos.x -= moveSpeed; // left arrow
         if (keyIsDown('ArrowRight')) this.pos.x += moveSpeed; // right arrow
         if (keyIsDown('ArrowUp')) this.pos.y += moveSpeed; // up arrow
         if (keyIsDown('ArrowDown')) this.pos.y -= moveSpeed; // down arrow
-
+    
         // Check for manual reload with 'R' key
         if (keyIsDown('KeyR') && !this.isReloading && this.currentAmmo < this.magazineSize) {
             this.reload();
         }
-
+    
         // Constrain player within the window size
         const canvasWidth = gameSettings.mapCanvas.width;
         const canvasHeight = gameSettings.mapCanvas.height;
@@ -66,25 +81,23 @@ export class Player {
         const halfVisibleHeight = (canvasHeight / 2) / cameraScale;
         this.pos.x = Math.max(-halfVisibleWidth, Math.min(this.pos.x, halfVisibleWidth));
         this.pos.y = Math.max(-halfVisibleHeight, Math.min(this.pos.y, halfVisibleHeight));
-
+    
         // Check collision with zombies
         gameSettings.zombies.forEach(zombie => {
             if (!zombie.isDead && this.pos.distance(zombie.pos) < 1) {
                 setGameOver(true);
             }
         });
-
-
-
+    
         // Automatically shoot if the weapon is automatic
         if (this.isAutomatic && mouseIsDown(0) && !this.isReloading) {
             const currentTime = performance.now();
-            if (currentTime - this.lastShootTime >= this.shootDelay) {
+            if (currentTime - this.lastShootTime >= this.shootDelay) { // Use shootDelay property
                 this.shoot(mousePos);
                 this.lastShootTime = currentTime;
             }
         }
-
+    
         // Update reload animation progress
         if (this.isReloading) {
             this.reloadProgress += 1 / (this.reloadAnimationDuration * 60); // Update based on frame rate (60 FPS)
@@ -94,7 +107,7 @@ export class Player {
                 this.currentAmmo = this.magazineSize; // Refill the magazine
             }
         }
-
+    
         // Update the clip drop fade out
         if (this.clipDropped) {
             this.clipDropTime += 1000 / 60; // Assuming 60 FPS for consistency
@@ -134,6 +147,9 @@ export class Player {
             // If no ammo left, simulate a dry fire and start reload
             this.reload(); // Start reloading immediately after dry fire
         }
+        setTimeout(() => {
+            // Code to execute after shootDelay milliseconds
+        }, this.shootDelay);
     }
 
     reload() {
