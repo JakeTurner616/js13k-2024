@@ -107,7 +107,7 @@ export class Zombie {
         // Spread fire to nearby zombies if they are close enough to this burning zombie
         gameSettings.zombies.forEach(otherZombie => {
             if (otherZombie !== this && !otherZombie.isDead && !otherZombie.onFire) {
-                if (this.pos.distance(otherZombie.pos) < 1) {
+                if (this.pos.distance(otherZombie.pos) == this.pos) { // Check if the 2 zombies are close enough to make contact
                     otherZombie.catchFire();  // Trigger the catchFire method for the nearby zombie
                 }
             }
@@ -134,7 +134,7 @@ export class Zombie {
         }
     }
 
-    avoidCollisions() {
+    avoidCollisions() { // Poor mans pathfinding
         gameSettings.zombies.forEach(otherZombie => {
             if (otherZombie !== this && !otherZombie.isDead && this.pos.distance(otherZombie.pos) < 1) {
                 const avoidanceDirection = this.pos.subtract(otherZombie.pos).normalize();

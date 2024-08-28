@@ -34,12 +34,11 @@ export function setCurrency(value) {
     // Add any additional logic here, such as updating the UI, if needed
 }
 
-// Example usage of incrementing currency
+// Increment currency
 export function addCurrency(amount) {
     setCurrency(getCurrency() + amount);
 }
 
-// The Bullet class
 export class Bullet {
     constructor(pos, direction, fireAbility, iceAbility) {
         this.pos = pos;
@@ -66,6 +65,12 @@ export class Bullet {
         // Check collision with zombies
         for (let i = 0; i < gameSettings.zombies.length; i++) {
             const zombie = gameSettings.zombies[i];
+
+            // Skip hit detection if the zombie is on fire
+            if (zombie.onFire) {
+                continue;
+            }
+
             if (!zombie.isDead && this.pos.distance(zombie.pos) < 1) {
                 if (this.fireAbility) {
                     zombie.onFire = true;
@@ -76,7 +81,7 @@ export class Bullet {
                 } else {
                     zombie.isDead = true;
                 }
-                zombie.deathTimer = 4; // Set death timer to 4 seconds for fire ability
+                zombie.deathTimer = 3; // Set death timer to 4 seconds for fire ability
                 incrementScore(); // Increment the score using the function
                 addCurrency(1); // Increase currency using the setter
 
