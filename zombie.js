@@ -3,6 +3,9 @@ import { sound_explode } from './sound.js';
 import { player } from './main.js';
 import { EXPLOSION_RADIUS, gameSettings } from './main.js';
 import { vec2, drawRect, hsl, drawLine, PI } from './libs/littlejs.esm.min.js';
+import { incrementScore, addCurrency } from './bullet.js'; //indrement the score for area of effect attacks only
+import { showComboMessage } from './main.js'; // Import the function to show combo messages
+
 export const gameState = {
     gameOver: false
 };
@@ -117,6 +120,9 @@ export class Zombie {
 
     catchFire() {
         if (!this.onFire) { // Ensure we only trigger this once
+            //increment score for catching fire
+            incrementScore(1);
+            addCurrency(1);
             this.onFire = true;
             this.fireEmitter = makeFire(this.pos);  // Start the fire effect immediately
             this.fireSpreadTimer = 2;  // Fire spread timer set for 2 seconds
@@ -322,29 +328,43 @@ export class Boomer extends Zombie {
     }
 
     explode() {
+        addCurrency(1);
         this.bloodEmitter = makeBlood(this.pos, 10);
         
         this.explosionEmitter = makeExplosion(this.pos, 200);
         sound_explode.play(this.pos);
-
-        // Affect all zombies within the explosion radius
+    
+        let comboCount = 0;
+        const comboThreshold = 2;
+    
         gameSettings.zombies.forEach(zombie => {
             if (this.pos.distance(zombie.pos) < EXPLOSION_RADIUS) {
                 if (zombie !== this && !zombie.isDead) {
-                    zombie.catchFire(); // Set nearby zombies on fire instead of killing them
+                    zombie.catchFire();
+                    comboCount++;
                 }
             }
         });
-
-        if (this.pos.distance(player.pos) < EXPLOSION_RADIUS) {
-            setGameOver(true); // End game if player is within explosion radius
+    
+        if (comboCount >= comboThreshold) {
+            console.log(`Combo x${comboCount}`);
+            incrementScore(1 * comboCount); // Increment score 
+            
+            // Convert explosion position to vec2 for combo message
+            const comboPosition = new vec2(this.pos.x, this.pos.y);
+            showComboMessage(comboCount, comboPosition); // Pass vec2 position
         }
-
+    
+        if (this.pos.distance(player.pos) < EXPLOSION_RADIUS) {
+            setGameOver(true);
+        }
+    
         setTimeout(() => {
+            addCurrency(1);
             if (this.bloodEmitter) this.bloodEmitter.emitRate = 0;
             if (this.explosionEmitter) this.explosionEmitter.emitRate = 0;
         }, 1000);
-
+    
         this.deathTimer = 0;
     }
 
@@ -639,13 +659,22 @@ export class DeadlyDangler extends Zombie {
         if (this.fadeOutTimer > 0) {
             opacity = this.fadeOutTimer / 4; // Adjust opacity based on the fade-out timer
         }
-
-        // Determine the body color based on whether the DeadlyDangler is dead
-        const color = this.isDead ? hsl(0, 0, 0.2, opacity) : hsl(0.3, 1, 0.5, opacity); // Grey when dead, green otherwise
-
+    
+        // Determine the body color
+        let color;
+        if (this.isDead) {
+            if (this.onFire) {
+                color = hsl(0.1, 1, 0.5, opacity); // Burning color (orange) if on fire
+            } else {
+                color = hsl(0, 0, 0.2, opacity); // Grey when dead and not on fire
+            }
+        } else {
+            color = hsl(0.3, 1, 0.5, opacity); // Normal color (green) when alive and not on fire
+        }
+    
         // Render the zombie base with fading effect
         drawRect(this.pos, vec2(1, 1), color);
-
+    
         // Render the tendrils with the same fading effect
         for (let side = -1; side <= 1; side += 2) { // -1 for left side, 1 for right side
             for (let i = 0; i < this.numLegsPerSide; i++) {

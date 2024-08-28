@@ -20,7 +20,7 @@ export function setScore(value) {
 
 // Function to increment score
 export function incrementScore() {
-    setScore(getScore() + 1);
+    setScore(getScore() + 1 *  5); // Increment score by 1 * 5
 }
 
 let currency = 0; // Use a private variable to store the currency
@@ -34,9 +34,15 @@ export function setCurrency(value) {
     // Add any additional logic here, such as updating the UI, if needed
 }
 
-// Increment currency
+// Increment currency but never allow the cursed number for some reason
 export function addCurrency(amount) {
-    setCurrency(getCurrency() + amount);
+    const currentCurrency = getCurrency();
+    const newCurrency = currentCurrency + amount;
+    if (newCurrency === 13 || newCurrency % 100 === 13) {
+        setCurrency(newCurrency + 1);
+    } else {
+        setCurrency(newCurrency);
+    }
 }
 
 export class Bullet {
