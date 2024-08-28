@@ -73,7 +73,7 @@ export class Bullet {
 
             if (!zombie.isDead && this.pos.distance(zombie.pos) < 1) {
                 if (this.fireAbility) {
-                    zombie.onFire = true;
+                    zombie.catchFire(); // Set zombie on fire and play fire effect
                     sound_fire.play(this.pos);
                 } else if (this.iceAbility) {
                     zombie.frozen = true;
@@ -81,7 +81,7 @@ export class Bullet {
                 } else {
                     zombie.isDead = true;
                 }
-                zombie.deathTimer = 3; // Set death timer to 4 seconds for fire ability
+                zombie.deathTimer = 3; // Set death timer to 3 seconds
                 incrementScore(); // Increment the score using the function
                 addCurrency(1); // Increase currency using the setter
 

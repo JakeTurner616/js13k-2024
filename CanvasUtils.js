@@ -18,9 +18,6 @@ export function setupBiomeCanvas() {
 }
 
 export function adjustCanvasSize() { // Stretch map texture across canvas
-    const pixelRatio = window.devicePixelRatio || 1;
     gameSettings.mapCanvas.width = window.innerWidth;
     gameSettings.mapCanvas.height = window.innerHeight;
-    
-    //console.log('Canvas size adjusted:', gameSettings.mapCanvas.width, gameSettings.mapCanvas.height);
 }

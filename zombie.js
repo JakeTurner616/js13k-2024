@@ -22,7 +22,7 @@ export class Zombie {
         this.onFire = false;
         this.fireEmitter = null;
         this.fadeOutTimer = 3; // Timer for fade-out, starts after contagious period or upon death
-        this.fireSpreadTimer = 2; // Timer for controlling fire spread duration (2 seconds by default)
+        this.fireSpreadTimer = 1; // Timer for controlling fire spread duration (1 second by default)
 
         // Arm properties for zombie-like movement
         this.armLength = 1.2 + (Math.random() * 0.4); // Total length of each arm with random variation
@@ -57,6 +57,7 @@ export class Zombie {
         if (this.isDead) {
             this.handleDeathFadeOut(); // Handle fading out when zombie is dead
         } else if (this.onFire) {
+
             this.handleFireState(); // Handle fire spreading and eventually fading out
         } else {
             this.checkFireSpread(); // Check if this zombie should catch fire from another onFire zombie
@@ -77,10 +78,12 @@ export class Zombie {
             }
         } else if (this.fadeOutTimer === 0) {
             this.startFadeOut(); // Start fade-out if it's not started yet
+            
         }
     }
 
     handleFireState() {
+        
         // If the zombie is on fire, manage the fire spreading and eventually start fading out
         if (this.fireSpreadTimer > 0) {
             this.spreadFire();  // Spread fire if the fire spread timer is active
@@ -115,9 +118,11 @@ export class Zombie {
     catchFire() {
         if (!this.onFire) { // Ensure we only trigger this once
             this.onFire = true;
-            this.fireEmitter = makeFire(this.pos);  // Start the fire effect
+            this.fireEmitter = makeFire(this.pos);  // Start the fire effect immediately
             this.fireSpreadTimer = 2;  // Fire spread timer set for 2 seconds
             this.speed = 0; // Stop the zombie from moving when it's on fire
+            
+
         }
     }
 
@@ -186,13 +191,12 @@ export class Zombie {
     }
 
     renderArms(opacity) {
-        if (this.isDead) {
-            // If zombie is dead, use frozen arm positions
+        if (this.isDead || this.onFire) {
+            // If zombie is dead or on fire, use frozen arm positions
             this.drawFrozenArm(this.frozenLeftArm, opacity);
             this.drawFrozenArm(this.frozenRightArm, opacity);
-            
         } else {
-            // If zombie is alive, animate arms
+            // If zombie is alive and not on fire, animate arms
             this.drawArm(1, opacity);  // Right arm
             this.drawArm(-1, opacity); // Left arm
         }
@@ -200,8 +204,9 @@ export class Zombie {
 
     drawFrozenArm(arm, opacity) {
         if (arm) {
-            drawLine(arm.upperStart, arm.upperEnd, this.armThickness, hsl(0, 0, 0.2, opacity)); // Grey color for dead zombie arms
-            drawLine(arm.upperEnd, arm.foreEnd, this.armThickness, hsl(0, 0, 0.2, opacity));
+            const armColor = this.onFire ? hsl(0.1, 1, 0.5, opacity) : hsl(0, 0, 0.2, opacity); // Orange for on fire, grey for dead
+            drawLine(arm.upperStart, arm.upperEnd, this.armThickness, armColor); // Draw upper arm
+            drawLine(arm.upperEnd, arm.foreEnd, this.armThickness, armColor);    // Draw forearm
         }
     }
 
@@ -209,27 +214,31 @@ export class Zombie {
         // Calculate direction to player
         const directionToPlayer = player.pos.subtract(this.pos).normalize();
         const angleToPlayer = Math.atan2(directionToPlayer.y, directionToPlayer.x);
-
+    
         // Adjust the base position for the arms to track the player
         const armBaseOffset = vec2(Math.cos(angleToPlayer + Math.PI / 2 * side), Math.sin(angleToPlayer + Math.PI / 2 * side)).scale(0.5);
         const basePos = this.pos.add(armBaseOffset);
-
+    
         // Lengths of each arm segment
         const upperArmLength = this.armLength * 0.5;
         const forearmLength = this.armLength * 0.5;
-
+    
         // Oscillate arm angles to create a zombie-like staggered effect
         const upperArmAngle = angleToPlayer + Math.sin(this.time + this.armDelay) * (this.maxArmAngle - this.minArmAngle);
         const forearmAngle = upperArmAngle + Math.sin(this.time + this.armDelay + Math.PI / 4) * (this.maxArmAngle - this.minArmAngle);
-
+    
         // Calculate end position of the upper arm
         const upperArmEnd = basePos.add(vec2(Math.cos(upperArmAngle), Math.sin(upperArmAngle)).scale(upperArmLength));
-        drawLine(basePos, upperArmEnd, this.armThickness, hsl(0.3, 1, 0.5, opacity)); // Draw upper arm in green
-
+    
+        // Determine the arm color based on fire state
+        const armColor = this.onFire ? hsl(0.1, 1, 0.5, opacity) : hsl(0.3, 1, 0.5, opacity);
+    
+        drawLine(basePos, upperArmEnd, this.armThickness, armColor); // Draw upper arm with appropriate color
+    
         // Calculate end position of the forearm
         const forearmEnd = upperArmEnd.add(vec2(Math.cos(forearmAngle), Math.sin(forearmAngle)).scale(forearmLength));
-        drawLine(upperArmEnd, forearmEnd, this.armThickness, hsl(0.3, 1, 0.5, opacity)); // Draw forearm in green
-
+        drawLine(upperArmEnd, forearmEnd, this.armThickness, armColor); // Draw forearm with appropriate color
+    
         // Save arm positions for freezing upon death
         if (side === 1) {
             this.frozenRightArm = { upperStart: basePos, upperEnd: upperArmEnd, foreEnd: forearmEnd };
@@ -314,6 +323,7 @@ export class Boomer extends Zombie {
 
     explode() {
         this.bloodEmitter = makeBlood(this.pos, 10);
+        
         this.explosionEmitter = makeExplosion(this.pos, 200);
         sound_explode.play(this.pos);
 
@@ -345,27 +355,30 @@ export class Boomer extends Zombie {
     }
 
     getCurrentArmPosition(side) {
-        // Calculate direction to player
-        const directionToPlayer = player.pos.subtract(this.pos).normalize();
-        const angleToPlayer = Math.atan2(directionToPlayer.y, directionToPlayer.x);
+    // Calculate direction to player
+    const directionToPlayer = player.pos.subtract(this.pos).normalize();
+    const angleToPlayer = Math.atan2(directionToPlayer.y, directionToPlayer.x);
 
-        // Adjust the base position for the arms to track the player
-        const armBaseOffset = vec2(Math.cos(angleToPlayer + PI / 2 * side), Math.sin(angleToPlayer + PI / 2 * side)).scale(0.5);
-        const basePos = this.pos.add(armBaseOffset);
+    // Adjust the base position for the arms to track the player
+    const armBaseOffset = vec2(Math.cos(angleToPlayer + Math.PI / 2 * side), Math.sin(angleToPlayer + Math.PI / 2 * side)).scale(0.5);
+    const basePos = this.pos.add(armBaseOffset);
 
-        // Lengths of each arm segment
-        const upperArmLength = this.armLength * 0.5;
-        const forearmLength = this.armLength * 0.5;
+    // Lengths of each arm segment
+    const upperArmLength = this.armLength * 0.5;
+    const forearmLength = this.armLength * 0.5;
 
-        // Oscillate arm angles to create a zombie-like staggered effect
-        const upperArmAngle = angleToPlayer + Math.sin(this.time + this.armDelay) * (this.maxArmAngle - this.minArmAngle);
-        const forearmAngle = upperArmAngle + Math.sin(this.time + this.armDelay + PI / 4) * (this.maxArmAngle - this.minArmAngle);
+    // Oscillate arm angles to create a zombie-like staggered effect
+    const upperArmAngle = angleToPlayer + Math.sin(this.time + this.armDelay) * (this.maxArmAngle - this.minArmAngle);
+    const forearmAngle = upperArmAngle + Math.sin(this.time + this.armDelay + Math.PI / 4) * (this.maxArmAngle - this.minArmAngle);
 
-        // Calculate end position of the upper arm
-        const upperArmEnd = basePos.add(vec2(Math.cos(upperArmAngle), Math.sin(upperArmAngle)).scale(upperArmLength));
-        const forearmEnd = upperArmEnd.add(vec2(Math.cos(forearmAngle), Math.sin(forearmAngle)).scale(forearmLength));
+    // Calculate end position of the upper arm
+    const upperArmEnd = basePos.add(vec2(Math.cos(upperArmAngle), Math.sin(upperArmAngle)).scale(upperArmLength));
 
-        return { upperStart: basePos, upperEnd: upperArmEnd, foreEnd: forearmEnd };
+    // Calculate end position of the forearm
+    const forearmEnd = upperArmEnd.add(vec2(Math.cos(forearmAngle), Math.sin(forearmAngle)).scale(forearmLength));
+
+    // Return the calculated positions
+    return { upperStart: basePos, upperEnd: upperArmEnd, foreEnd: forearmEnd };
     }
 
     render() {
@@ -453,30 +466,7 @@ export class Boomer extends Zombie {
         }
     }
 
-    explode() {
-        this.bloodEmitter = makeBlood(this.pos, 10);
-        this.explosionEmitter = makeExplosion(this.pos, 200);
-        sound_explode.play(this.pos);
 
-        gameSettings.zombies.forEach(zombie => {
-            if (this.pos.distance(zombie.pos) < EXPLOSION_RADIUS) {
-                zombie.isDead = true;
-                zombie.deathTimer = 3;
-                zombie.startFadeOut();
-            }
-        });
-
-        if (this.pos.distance(player.pos) < EXPLOSION_RADIUS) {
-            setGameOver(true); // Use setGameOver() instead of direct assignment
-        }
-
-        setTimeout(() => {
-            if (this.bloodEmitter) this.bloodEmitter.emitRate = 0;
-            if (this.explosionEmitter) this.explosionEmitter.emitRate = 0;
-        }, 1000);
-
-        this.deathTimer = 0;
-    }
 }
 export class DeadlyDangler extends Zombie {
     constructor(pos) {
