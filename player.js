@@ -1,7 +1,7 @@
 import { gameSettings } from './main.js';
 import { Bullet } from './bullet.js';
 import { sound_shoot, sound_reload } from './sound.js'; // Added sound_reload
-import { setGameOver } from './zombie.js';
+import { setGameOver, gameState } from './zombie.js';
 import { isInShop } from './shop.js';
 import { keyIsDown, keyWasPressed, mouseIsDown, mousePos, vec2, drawRect, drawLine, hsl, cameraScale } from './libs/littlejs.esm.min.js';
 
@@ -11,14 +11,14 @@ export class Player {
         this.weapon = 'Pistol'; // Default weapon
         this.items = [];
         this.fireAbility = false;
-        this.iceAbility = false;
+
         this.isAutomatic = false; // Indicates if bullets are fired automatically
         this.lastShootTime = 0; // Last time the player shot
         this.shootDelay = 0;
-        this.machineGunShootDelay = 500; // Machine Gun specific shoot delay
-        this.shotgunShootDelay = 700; // Shotgun specific shoot delay
+        this.machineGunShootDelay = 200; // Machine Gun specific shoot delay
+        this.shotgunShootDelay = 400; // Shotgun specific shoot delay
 
-        this.magazineSize = 13; // Magazine size set to 13 to fit the Triskaidekaphobia theme
+        this.magazineSize = 7; // Default magazine size for Pistol and Machine Gun
         this.currentAmmo = this.magazineSize; // Start with a full magazine
         this.isReloading = false; // Track if the player is currently reloading
         this.reloadTime = 1000; // Reload time in milliseconds
@@ -31,6 +31,7 @@ export class Player {
         this.clipDropTime = 0; // Time since the clip was dropped
         this.clipFadeDuration = 4000; // Duration for the clip to fade out in milliseconds
         this.clipRotation = 0; // Rotation angle for the dropped clip
+        this.lastAngle = 0; // Store the last angle
     }
 
     addItem(itemName) {
@@ -39,24 +40,29 @@ export class Player {
         // Handle special cases for different items
         if (itemName === 'Shotgun') {
             this.weapon = itemName;
-            // Shotgun can be automatic if both "Shotgun" and "Machine Gun" are purchased
             this.isAutomatic = this.items.includes('Machine Gun');
             this.shootDelay = this.shotgunShootDelay; // Set shoot delay for Shotgun
+            this.magazineSize = 6; // Shotgun holds 6 shots
+            this.currentAmmo = Math.min(this.currentAmmo, this.magazineSize); // Adjust ammo if switching from a different weapon
+
         } else if (itemName === 'Machine Gun') {
             this.weapon = itemName;
             this.isAutomatic = true; // Machine Gun is always automatic
             this.shootDelay = this.machineGunShootDelay; // Use machine gun specific shoot delay
+            this.magazineSize = 13; // Machine Gun holds 13 shots
+            this.currentAmmo = this.magazineSize; // Fill ammo to the full magazine size
+
             // If the player already has a Shotgun, set it to automatic as well
             if (this.items.includes('Shotgun')) {
                 this.weapon = 'Shotgun'; // Prioritize the Shotgun if already equipped
                 this.isAutomatic = true; // Ensure automatic firing mode is enabled for the shotgun as well
                 this.shootDelay = this.shotgunShootDelay; // Use shotgun-specific delay for automatic shotgun
+                this.magazineSize = 6; // Reset magazine size for shotgun
+                this.currentAmmo = Math.min(this.currentAmmo, this.magazineSize); // Adjust ammo if switching from machine gun
             }
         } else if (itemName === 'Fire Ability') {
             this.fireAbility = true;
-        } else if (itemName === 'Ice Ability') {
-            this.iceAbility = true;
-        }
+        } 
     }
 
     update() {
@@ -120,6 +126,9 @@ export class Player {
     shoot(targetPos) {
         if (isInShop() || this.isReloading) return; // Don't shoot if reloading or in shop
 
+        const currentTime = performance.now();
+        if (currentTime - this.lastShootTime < this.shootDelay) return; // Prevent shooting if shootDelay has not passed
+
         if (this.currentAmmo > 0) {
             let numBullets = 1;
             let spread = 0.04;
@@ -131,25 +140,25 @@ export class Player {
 
             for (let i = 0; i < numBullets; i++) {
                 const direction = targetPos.subtract(this.pos).normalize().rotate((Math.random() - 0.5) * spread);
-                gameSettings.bullets.push(new Bullet(this.pos.add(direction.scale(1.5)), direction, this.fireAbility, this.iceAbility));
+                gameSettings.bullets.push(new Bullet(this.pos.add(direction.scale(1.5)), direction, this.fireAbility));
             }
 
             this.currentAmmo--; // Decrease ammo count
             sound_shoot.play(this.pos);
 
-            // Drop the clip immediately when the ammo reaches zero
-            if (this.currentAmmo === 0) {
+            // Drop the clip immediately when the ammo reaches zero, except for the Shotgun
+            if (this.currentAmmo === 0 && this.weapon !== 'Shotgun') {
                 this.dropClip();
                 this.reload(); // Start reload after the last shot is fired
+            } else if (this.currentAmmo === 0) {
+                this.reload(); // Start reload for Shotgun without dropping a clip
             }
 
+            this.lastShootTime = currentTime; // Update lastShootTime after shooting
         } else if (this.currentAmmo === 0) {
             // If no ammo left, simulate a dry fire and start reload
             this.reload(); // Start reloading immediately after dry fire
         }
-        setTimeout(() => {
-            // Code to execute after shootDelay milliseconds
-        }, this.shootDelay);
     }
 
     reload() {
@@ -159,6 +168,8 @@ export class Player {
     }
 
     dropClip() {
+        if (this.weapon === 'Shotgun') return; // Do not drop a clip if the weapon is a Shotgun
+
         // Record the position to drop the clip at the player's current position
         this.clipDropped = true;
         this.clipDropPos = vec2(this.pos.x, this.pos.y); // Corrected: Create a new vec2 with the current position
@@ -170,14 +181,37 @@ export class Player {
 
     render() {
         // Calculate angle between player and mouse for direction
-        const dx = mousePos.x - this.pos.x;
-        const dy = mousePos.y - this.pos.y;
-        const angle = Math.atan2(dy, dx);
+        let angle;
+
+        if (!gameState.gameOver) {
+            // If the game is not over, calculate the angle towards the mouse cursor
+            const dx = mousePos.x - this.pos.x;
+            const dy = mousePos.y - this.pos.y;
+            angle = Math.atan2(dy, dx);
+
+            // Store the calculated angle as the last angle
+            this.lastAngle = angle;
+        } else {
+            // If the game is over, keep the arms in their last position
+            angle = this.lastAngle; // Use the stored angle
+        }
         
         // Arm length and positions
         const armTipLength = 1.5; // Normal distance from player to gun tip
-        const gunLength = 0.6; // Length of the gun itself
-    
+        let gunLength, gunColor;
+
+        // Adjust gun properties based on weapon type
+        if (this.weapon === 'Pistol') {
+            gunLength = 0.6;
+            gunColor = hsl(0, 0, 0.5); // Grey color for Pistol
+        } else if (this.weapon === 'Shotgun') {
+            gunLength = 0.8;
+            gunColor = hsl(0.08, 0.6, 0.4); // Brown color for Shotgun
+        } else if (this.weapon === 'Machine Gun') {
+            gunLength = 1.0;
+            gunColor = hsl(0, 0, 0); // Black color for Machine Gun
+        }
+
         // Draw the dropped clip first to ensure it's below the player
         if (this.clipDropped) {
             const fadeProgress = 1 - (this.clipDropTime / this.clipFadeDuration); // Calculate fade-out progress
@@ -231,7 +265,7 @@ export class Player {
     
         // Draw the gun
         const gunTip = rightArmTip.add(vec2(Math.cos(angle) * gunLength, Math.sin(angle) * gunLength));
-        drawLine(rightArmTip, gunTip, 0.18, hsl(0, 0, 0)); // Gun barrel
-        drawLine(rightArmTip, gunTip, 0.16, hsl(0.08, 0.6, 0.4)); // Gun details
+        drawLine(rightArmTip, gunTip, 0.18, hsl(0, 0, 0)); // Gun barrel outline
+        drawLine(rightArmTip, gunTip, 0.16, gunColor); // Gun details with adjusted color
     }
 }

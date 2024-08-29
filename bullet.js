@@ -1,5 +1,5 @@
 import { gameSettings, startSpawningZombies, stopSpawningZombies } from './main.js';
-import { sound_hit, sound_fire, sound_ice } from './sound.js';
+import { sound_hit, sound_fire } from './sound.js';
 import { makeBlood } from './effects.js';
 import { setGameOver } from './zombie.js';
 import { vec2, mainCanvas, drawRect, hsl, cameraScale } from './libs/littlejs.esm.min.js';
@@ -20,7 +20,7 @@ export function setScore(value) {
 
 // Function to increment score
 export function incrementScore() {
-    setScore(getScore() + 1 *  5); // Increment score by 1 * 5
+    setScore(getScore() + 1 * 5); // Increment score by 1 * 5
 }
 
 let currency = 0; // Use a private variable to store the currency
@@ -46,12 +46,11 @@ export function addCurrency(amount) {
 }
 
 export class Bullet {
-    constructor(pos, direction, fireAbility, iceAbility) {
+    constructor(pos, direction, fireAbility) {
         this.pos = pos;
         this.direction = direction.normalize(); // Normalize the direction to ensure it's a unit vector
         this.speed = 0.5;
         this.fireAbility = fireAbility;
-        this.iceAbility = iceAbility;
     }
 
     update() {
@@ -81,10 +80,7 @@ export class Bullet {
                 if (this.fireAbility) {
                     zombie.catchFire(); // Set zombie on fire and play fire effect
                     sound_fire.play(this.pos);
-                } else if (this.iceAbility) {
-                    zombie.frozen = true;
-                    sound_ice.play(this.pos);
-                } else {
+                }  else {
                     zombie.isDead = true;
                 }
                 zombie.deathTimer = 3; // Set death timer to 3 seconds
@@ -125,6 +121,14 @@ export class Bullet {
     }
 
     render() {
-        drawRect(this.pos, vec2(0.5, 0.5), hsl(0.1, 1, 0.5));
+        // Adjust bullet color based on abilities
+        let bulletColor;
+        if (this.fireAbility) {
+            bulletColor = hsl(0, 1, 0.5); // Red color for fire bullets
+        } else {
+            bulletColor = hsl(0.05, 0.8, 0.4); // Red-brown color for normal bullets
+        }
+
+        drawRect(this.pos, vec2(0.5, 0.5), bulletColor);
     }
 }

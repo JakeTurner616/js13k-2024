@@ -54,3 +54,21 @@ export function makeExplosion(pos, amount = 10) {
     
     return emitter;
 }
+
+export function makeIce(pos, amount = 20) {
+    const emitter = new ParticleEmitter(
+        pos, 0, 0.5, 0, amount, 2 * PI,
+        undefined,
+        new Color(0, 0.5, 1), new Color(0, 0.25, 1),
+        new Color(0, 0, 1, 0), new Color(0, 0, 1, 0),
+        2, 0.2, 0.5, 0.3, 0.05,
+        0.9, 0.9, 0.3, PI, 0.1,
+        1.5, false, true, 0
+    );
+
+    emitter.elasticity = 0.5;
+    emitter.trailScale = 0.2;
+    emitter.fadeRate = 0.05;
+
+    return emitter;
+}

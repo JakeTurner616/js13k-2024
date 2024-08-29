@@ -3,7 +3,7 @@ import { sound_explode } from './sound.js';
 import { player } from './main.js';
 import { EXPLOSION_RADIUS, gameSettings } from './main.js';
 import { vec2, drawRect, hsl, drawLine, PI } from './libs/littlejs.esm.min.js';
-import { incrementScore, addCurrency } from './bullet.js'; //indrement the score for area of effect attacks only
+import { incrementScore, addCurrency } from './bullet.js'; // Increment the score for area of effect attacks only
 import { showComboMessage } from './main.js'; // Import the function to show combo messages
 
 export const gameState = {
@@ -15,13 +15,83 @@ export function setGameOver(value) {
     return gameState.gameOver;
 }
 
+// Define global variables to manage combos
+let comboChains = [];
+const MAX_CHAIN_DURATION = 3; // Max duration (in seconds) to count zombies in a chain
+const COMBO_DISTANCE_THRESHOLD = 1; // Distance to differentiate different combo chains
+
+// Function to start a new combo chain
+function startComboChain(zombie) {
+    const newChain = {
+        zombies: new Set([zombie]),
+        startTime: Date.now(),
+        lastZombiePosition: new vec2(zombie.pos.x, zombie.pos.y), // Create a new vec2 instance with the same coordinates
+    };
+    comboChains.push(newChain);
+}
+
+// Function to add a zombie to an existing chain
+function addToComboChain(chain, zombie) {
+    chain.zombies.add(zombie);
+    chain.lastZombiePosition = new vec2(zombie.pos.x, zombie.pos.y); // Create a new vec2 instance with the same coordinates
+}
+
+// Function to check if a zombie is within combo distance of any chain
+function findNearestChain(zombie) {
+    let nearestChain = null;
+    let shortestDistance = COMBO_DISTANCE_THRESHOLD;
+    
+    comboChains.forEach(chain => {
+        chain.zombies.forEach(z => {
+            const distance = z.pos.distance(zombie.pos); // Ensure distance method exists
+            if (distance < shortestDistance) {
+                shortestDistance = distance;
+                nearestChain = chain;
+            }
+        });
+    });
+
+    return nearestChain;
+}
+
+// Function to finalize the combo chain and calculate score
+// Function to finalize the combo chain and calculate score
+function finalizeComboChain(chain) {
+    const comboCount = chain.zombies.size;
+    const comboPosition = chain.lastZombiePosition;
+
+    // Only display a combo message if the combo count is 2 or higher
+    if (comboCount >= 2) {
+        const multiplier = comboCount; // Score multiplier based on combo count
+
+        incrementScore(multiplier); // Increment score with the calculated multiplier
+        showComboMessage(comboCount, comboPosition); // Display the combo message
+
+        console.log(`Combo chain ended with ${comboCount} zombies. Multiplier: x${multiplier}`);
+    }
+}
+
+// Function to update combo chains (called periodically)
+function updateComboChains() {
+    const currentTime = Date.now();
+    comboChains = comboChains.filter(chain => {
+        const duration = (currentTime - chain.startTime) / 1000; // Convert to seconds
+        if (duration >= MAX_CHAIN_DURATION) {
+            finalizeComboChain(chain); // Finalize and calculate score for expired chains
+            return false; // Remove chain from active list
+        }
+        return true;
+    });
+}
+
+// Ensure the updateComboChains function is called periodically
+setInterval(updateComboChains, 100); // Update combo chains every 100 ms
 
 export class Zombie {
     constructor(pos) {
-        this.pos = pos;
+        this.pos = new vec2(pos.x, pos.y); // Ensure pos is initialized as a vec2 instance
         this.speed = gameSettings.zombieSpeed;
         this.isDead = false;
-        this.frozen = false;
         this.onFire = false;
         this.fireEmitter = null;
         this.fadeOutTimer = 3; // Timer for fade-out, starts after contagious period or upon death
@@ -49,18 +119,9 @@ export class Zombie {
     update() {
         if (gameState.gameOver) return;
 
-        if (this.frozen) {
-            this.speed = 0;
-            setTimeout(() => {
-                this.frozen = false;
-                this.speed = gameSettings.zombieSpeed;
-            }, 3000);
-        }
-
         if (this.isDead) {
             this.handleDeathFadeOut(); // Handle fading out when zombie is dead
         } else if (this.onFire) {
-
             this.handleFireState(); // Handle fire spreading and eventually fading out
         } else {
             this.checkFireSpread(); // Check if this zombie should catch fire from another onFire zombie
@@ -81,12 +142,10 @@ export class Zombie {
             }
         } else if (this.fadeOutTimer === 0) {
             this.startFadeOut(); // Start fade-out if it's not started yet
-            
         }
     }
 
     handleFireState() {
-        
         // If the zombie is on fire, manage the fire spreading and eventually start fading out
         if (this.fireSpreadTimer > 0) {
             this.spreadFire();  // Spread fire if the fire spread timer is active
@@ -120,15 +179,20 @@ export class Zombie {
 
     catchFire() {
         if (!this.onFire) { // Ensure we only trigger this once
-            //increment score for catching fire
             incrementScore(1);
             addCurrency(1);
             this.onFire = true;
             this.fireEmitter = makeFire(this.pos);  // Start the fire effect immediately
             this.fireSpreadTimer = 2;  // Fire spread timer set for 2 seconds
             this.speed = 0; // Stop the zombie from moving when it's on fire
-            
 
+            // Determine the nearest combo chain or start a new one
+            const nearestChain = findNearestChain(this);
+            if (nearestChain) {
+                addToComboChain(nearestChain, this);
+            } else {
+                startComboChain(this);
+            }
         }
     }
 
@@ -136,7 +200,7 @@ export class Zombie {
         // Spread fire to nearby zombies if they are close enough to this burning zombie
         gameSettings.zombies.forEach(otherZombie => {
             if (otherZombie !== this && !otherZombie.isDead && !otherZombie.onFire) {
-                if (this.pos.distance(otherZombie.pos) == this.pos) { // Check if the 2 zombies are close enough to make contact
+                if (this.pos.distance(otherZombie.pos) < 1) { // Check if the 2 zombies are close enough to make contact
                     otherZombie.catchFire();  // Trigger the catchFire method for the nearby zombie
                 }
             }
@@ -186,8 +250,6 @@ export class Zombie {
             drawRect(this.pos, vec2(1, 1), hsl(0, 0, 0.2, opacity));
         } else if (this.onFire) {
             drawRect(this.pos, vec2(1, 1), hsl(0.1, 1, 0.5, opacity)); // Draw burning zombie
-        } else if (this.frozen) {
-            drawRect(this.pos, vec2(1, 1), hsl(0.6, 1, 1));
         } else {
             drawRect(this.pos, vec2(1, 1), hsl(0.3, 1, 0.5));
         }
@@ -335,7 +397,7 @@ export class Boomer extends Zombie {
         sound_explode.play(this.pos);
     
         let comboCount = 0;
-        const comboThreshold = 2;
+        const comboThreshold = 3;
     
         gameSettings.zombies.forEach(zombie => {
             if (this.pos.distance(zombie.pos) < EXPLOSION_RADIUS) {

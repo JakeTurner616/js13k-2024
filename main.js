@@ -1,14 +1,16 @@
-//main.js
 import './libs/littlejs.esm.min.js';
 import { generateBiomeMap } from './biomeGenerator.js';
 import { Player } from './player.js';
 import { Zombie, Boomer, gameState, DeadlyDangler } from './zombie.js';
 import { setupBiomeCanvas, adjustCanvasSize, canvasState } from './CanvasUtils.js';
 import { handleShopMouseClick, handleShopInput, drawShop, isInShop } from './shop.js';
-import { getCurrency, getScore } from './bullet.js';
-import { vec2, engineInit, cameraScale, rand, hsl, mouseWasPressed, drawTextScreen, mousePos, drawText, setPaused } from './libs/littlejs.esm.min.js';
+import { getCurrency, getScore, setScore, setCurrency } from './bullet.js';
+import { vec2, engineInit, cameraScale, rand, hsl, mouseWasPressed, drawTextScreen, mousePos, drawText, setPaused, keyWasPressed, keyIsDown } from './libs/littlejs.esm.min.js';
 
 let isWindowFocused = true; // Flag to check if window is focused
+let isEnteringUsername = false; // Flag to track if we're in the username input state
+let username = ''; // Store the inputted username
+let showLeaderboard = false; // Flag to show the leaderboard
 
 // Combo message state
 let comboMessage = {
@@ -23,22 +25,20 @@ let comboMessage = {
 window.addEventListener('focus', () => {
     isWindowFocused = true;
     setPaused(false);
+    startSpawningZombies();
 });
 document.onvisibilitychange = function() {
     if (document.visibilityState === 'hidden') {
         isWindowFocused = false;
+        stopSpawningZombies();
         setPaused(true);
     }
     else {
         isWindowFocused = true;
         setPaused(false);
     }
-  };
-  
-window.addEventListener('blur', () => {
-    isWindowFocused = false;
-    setPaused(true);
-});
+};
+
 
 export const gameSettings = {
     zombieSpeed: 0.02,
@@ -87,7 +87,17 @@ export function stopSpawningZombies() {
 }
 
 function gameUpdate() {
-    if (gameState.gameOver) return;
+    if (gameState.gameOver) {
+        if (!isEnteringUsername && !showLeaderboard) {
+            // Prompt for username immediately after game over
+            promptForUsername();
+        } else if (isEnteringUsername) {
+            handleUsernameInput(); // Handle username input
+        } else if (showLeaderboard && keyWasPressed('KeyR')) {
+            resetGame(); // Reset game on 'R' key press
+        }
+        return;
+    }
 
     handleShopMouseClick();
 
@@ -131,6 +141,27 @@ function gameRender() {
             vec2(gameSettings.mapCanvas.width / 2, gameSettings.mapCanvas.height / 2),
             50, hsl(0, 0, 1), 10, hsl(0, 0, 0)
         );
+
+        drawTextScreen(
+            `Final Score: ${getScore()}`,
+            vec2(gameSettings.mapCanvas.width / 2, gameSettings.mapCanvas.height / 2 + 60),
+            40, hsl(0, 0, 1), 10, hsl(0, 0, 0)
+        );
+
+        if (isEnteringUsername) {
+            drawTextScreen(
+                `Enter Name: ${username}_`,
+                vec2(gameSettings.mapCanvas.width / 2, gameSettings.mapCanvas.height / 2 + 120),
+                30, hsl(0, 0, 1), 10, hsl(0, 0, 0)
+            );
+        } else if (showLeaderboard) {
+            drawLeaderboard();
+            drawTextScreen(
+                'Press R to Restart',
+                vec2(gameSettings.mapCanvas.width / 2, gameSettings.mapCanvas.height / 2 + 180),
+                30, hsl(0, 0, 1), 10, hsl(0, 0, 0)
+            );
+        }
     }
 }
 
@@ -215,7 +246,80 @@ function spawnZombie() {
 
 function gameUpdatePost() {
     // If needed for any post-update operations
+}
 
+// Function to prompt the user for a username and update the leaderboard
+function promptForUsername() {
+    isEnteringUsername = true;
+    username = '';
+}
+
+function handleUsernameInput() {
+    if (keyWasPressed('Enter') && username.length > 0) {
+        saveScore(username, getScore());
+        isEnteringUsername = false;
+        showLeaderboard = true;
+    } else if (keyWasPressed('Backspace') && username.length > 0) {
+        username = username.slice(0, -1);
+    } else if (username.length < 3) {
+        // Check for A-Z key presses
+        for (let i = 0; i < 26; i++) {
+            const keyCode = `Key${String.fromCharCode(65 + i)}`; // 'KeyA' to 'KeyZ'
+            if (keyWasPressed(keyCode)) {
+                username += String.fromCharCode(65 + i); // Append the character to the username
+                break;
+            }
+        }
+    }
+}
+// Function to save the score to the local storage leaderboard with custom namespace
+function saveScore(username, score) {
+    const leaderboardKey = 'Evacu13tion_leaderboard';
+    let leaderboard = JSON.parse(localStorage.getItem(leaderboardKey)) || [];
+
+    leaderboard.push({ username, score });
+    leaderboard.sort((a, b) => b.score - a.score);
+
+    localStorage.setItem(leaderboardKey, JSON.stringify(leaderboard));
+}
+
+// Function to draw the leaderboard
+function drawLeaderboard() {
+    const leaderboardKey = 'Evacu13tion_leaderboard';
+    const leaderboard = JSON.parse(localStorage.getItem(leaderboardKey)) || [];
+
+    let yOffset = gameSettings.mapCanvas.height / 2 - 60; // Starting Y position for leaderboard display
+
+    drawTextScreen(
+        'Leaderboard:',
+        vec2(gameSettings.mapCanvas.width / 2 , yOffset - 250),
+        30, hsl(0, 0, 1), 10, hsl(0, 0, 0)
+    );
+
+    leaderboard.slice(0, 5).forEach((entry, index) => {
+        yOffset += 40; // Increase Y offset for each entry
+        drawTextScreen(
+            `${index + 1}. ${entry.username} - ${entry.score}`,
+            vec2(gameSettings.mapCanvas.width / 2 , yOffset - 250),
+            25, hsl(0, 0, 1), 10, hsl(0, 0, 0)
+        );
+       
+    });
+}
+
+// Reset the game state
+function resetGame() {
+    gameState.gameOver = false;
+    setScore(0); // Reset score
+    setCurrency(0); // Reset currency
+    gameSettings.zombies = [];
+    gameSettings.bullets = [];
+    gameSettings.zombieSpeed = 0.02;
+    gameSettings.spawnRate = 1400;
+
+    player = new Player(vec2(0, 0)); // Reset player position and state
+    startSpawningZombies(); // Restart zombie spawning
+    showLeaderboard = false; // Hide the leaderboard on reset
 }
 
 // Start the game

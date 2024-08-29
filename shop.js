@@ -11,8 +11,7 @@ export function isInShop() {
 const items = [
     { name: 'Shotgun', cost: 10 },
     { name: 'Machine Gun', cost: 10 },
-    { name: 'Fire Ability', cost: 5 },
-    { name: 'Ice Ability', cost: 5 }
+    { name: 'Fire Ability', cost: 5 }
 ];
 export function setInShop(status) {
     inShop = status;
