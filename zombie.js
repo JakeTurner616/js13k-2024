@@ -208,24 +208,23 @@ export class Zombie {
     }
 
     moveTowardsPlayer() {
-        // If the zombie is not dead or on fire, it moves towards the player
-        if (!this.isDead && !this.onFire) {
+        // If the zombie is not dead, on fire, and not in the fade-out phase, it moves towards the player
+        if (!this.isDead && !this.onFire && this.fadeOutTimer > 0) {
             if (this.frameDelay > 0) {
                 this.frameDelay--;
             } else {
                 this.time += this.armOscillationSpeed; // Update time for arm animation after delay
             }
-
+    
             this.avoidCollisions();
-
+    
             const direction = player.pos.subtract(this.pos).normalize();
             this.pos = this.pos.add(direction.scale(this.speed));
+    
 
-            if (this.pos.distance(player.pos) < 1) {
-                setGameOver(true); // Trigger game over when zombie reaches the player
-            }
         }
     }
+    
 
     avoidCollisions() { // Poor mans pathfinding
         gameSettings.zombies.forEach(otherZombie => {
@@ -390,23 +389,36 @@ export class Boomer extends Zombie {
     }
 
     explode() {
+        // Adds currency and effects
         addCurrency(1);
         this.bloodEmitter = makeBlood(this.pos, 10);
         this.explosionEmitter = makeExplosion(this.pos, 200);
         sound_explode.play(this.pos);
     
+        // Initialize combo count for scoring
         let comboCount = 0;
-        const comboThreshold = 3;
+        const comboThreshold = 3; // Minimum zombies for a combo
     
+        // Iterate over all zombies to apply explosion effects
         gameSettings.zombies.forEach(zombie => {
             if (this.pos.distance(zombie.pos) < EXPLOSION_RADIUS) {
-                if (zombie !== this && !zombie.isDead && typeof zombie.takeExplosionDamage === 'function') {
-                    zombie.takeExplosionDamage(); // Call the method to handle explosion damage
-                    comboCount++;
+                // Damage or affect zombies that are within the blast radius
+                if (zombie !== this && !zombie.isDead) {
+                    if (typeof zombie.takeExplosionDamage === 'function') {
+                        zombie.takeExplosionDamage(); // Damage zombie
+                    }
+    
+                    // Ensure all zombies in range catch fire
+                    if (!zombie.onFire) {
+                        zombie.catchFire(); // Set zombie on fire
+                    }
+    
+                    comboCount++; // Increase combo count for each affected zombie
                 }
             }
         });
     
+        // Handle combo scoring and messages
         if (comboCount >= comboThreshold) {
             console.log(`Combo x${comboCount}`);
             incrementScore(1 * comboCount);
@@ -414,17 +426,19 @@ export class Boomer extends Zombie {
             showComboMessage(comboCount, comboPosition);
         }
     
+        // Check if the player is within the blast radius
         if (this.pos.distance(player.pos) < EXPLOSION_RADIUS) {
-            setGameOver(true);
+            setGameOver(true); // End game if player is too close
         }
     
+        // Clean up effects after a delay
         setTimeout(() => {
             addCurrency(1);
             if (this.bloodEmitter) this.bloodEmitter.emitRate = 0;
             if (this.explosionEmitter) this.explosionEmitter.emitRate = 0;
         }, 1000);
     
-        this.deathTimer = 0;
+        this.deathTimer = 0; // Reset death timer
     }
     freezeArms() {
         // Freeze the current positions of the arms when Boomer is shot and starts to explode
@@ -562,7 +576,32 @@ export class DeadlyDangler extends Zombie {
         this.movementSpeed = 0.02; // Speed of movement toward the player
         this.randomFactors = this.generateRandomFactors(); // Random factors for each tendril
     }
-
+    catchFire() {
+        if (!this.onFire && !this.isDead) { // Only catch fire if not already on fire and not dead
+            this.onFire = true;
+            this.fireEmitter = makeFire(this.pos); // Start the fire effect immediately
+            this.fireSpreadTimer = 2; // Fire spread timer set for 2 seconds
+            console.log("DeadlyDangler caught fire!");
+    
+            // Increment score and currency when the DeadlyDangler catches fire
+            incrementScore(1);
+            addCurrency(1);
+    
+            // Add to the nearest combo chain or start a new one
+            const nearestChain = findNearestChain(this);
+            if (nearestChain) {
+                addToComboChain(nearestChain, this);
+            } else {
+                startComboChain(this);
+            }
+    
+            // Adjust behavior if needed (e.g., stop movement)
+            this.speed = 0; // Stop the zombie from moving when it's on fire
+            
+            // Additional logic for handling fire state specific to DeadlyDangler if needed
+            // For example, play specific sounds or trigger special animations
+        }
+    }
     generateRandomFactors() {
         // Generate random factors for each tendril's oscillation
         const randomFactors = [];
@@ -746,7 +785,7 @@ export class DeadlyDangler extends Zombie {
         const baseOffsetX = (1 / 2 + this.legThickness / 2) * side; // Move to left or right edge
         const baseOffsetY = (index - (this.numLegsPerSide - 1) / 2) * (1 / this.numLegsPerSide);
         const basePos = this.pos.add(vec2(baseOffsetX, baseOffsetY));
-
+    
         // Define lengths for each tendril segment based on anatomical parts
         const lengths = {
             coxa: this.legLength * 0.3,
@@ -758,11 +797,11 @@ export class DeadlyDangler extends Zombie {
             tarsus: this.legLength * 0.2,
             claws: this.legLength * 0.1,
         };
-
+    
         // Retrieve random factors for this tendril
         const legIndex = index + (side === 1 ? this.numLegsPerSide : 0);
         const { phaseShift, amplitudeVariation } = this.randomFactors[legIndex];
-
+    
         // Freeze direction towards the player upon death
         let targetAngle;
         if (!this.isDead) {
@@ -773,10 +812,10 @@ export class DeadlyDangler extends Zombie {
             // Maintain the last target angle before dying
             targetAngle = this.lastTargetAngle || 0;
         }
-
+    
         // Base angle movement for trailing tendril effect with added randomness
         const t = (this.time + index * this.legOffset + phaseShift) % (2 * PI);
-
+    
         // Angles for each segment, adjusted to point towards the player
         const angles = {
             coxa: targetAngle + Math.sin(t) * PI / 12 * side * amplitudeVariation,
@@ -788,10 +827,19 @@ export class DeadlyDangler extends Zombie {
             tarsus: targetAngle + Math.sin(t + PI) * PI / 12 * side * amplitudeVariation,
             claws: targetAngle + Math.sin(t + (5 * PI) / 4) * PI / 16 * side * amplitudeVariation,
         };
-
-        // Determine the tendril color based on whether the DeadlyDangler is dead
-        const color = this.isDead ? hsl(0, 0, 0.2, opacity) : hsl(0, 1, 0.5, opacity); // Grey when dead, red otherwise
-
+    
+        // Determine the tendril color based on the DeadlyDangler's state
+        let color;
+        if (this.isDead) {
+            if (this.onFire) {
+                color = hsl(0.1, 1, 0.5, opacity); // Orange when on fire
+            } else {
+                color = hsl(0, 0, 0.2, opacity); // Grey when dead and not on fire
+            }
+        } else {
+            color = this.onFire ? hsl(0.1, 1, 0.5, opacity) : hsl(0, 1, 0.5, opacity); // Orange when on fire, red otherwise
+        }
+    
         // Calculate positions for each segment's end point and draw them with fading effect
         let currentPos = basePos;
         for (const [key, length] of Object.entries(lengths)) {
@@ -800,7 +848,7 @@ export class DeadlyDangler extends Zombie {
             drawLine(currentPos, nextPos, this.legThickness, color); // Use the color variable with fading effect
             currentPos = nextPos; // Move to the next position
         }
-
+    
         // Store the last angle before death to maintain it after dying
         if (!this.isDead) {
             this.lastTargetAngle = targetAngle;

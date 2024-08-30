@@ -90,8 +90,12 @@ export class Player {
     
         // Check collision with zombies
         gameSettings.zombies.forEach(zombie => {
+            // Check if zombie is not dead, not in fade-out process, and within collision range
             if (!zombie.isDead && this.pos.distance(zombie.pos) < 1) {
-                setGameOver(true);
+                // Set game over if the zombie is alive and not on fire or if it's on fire and still contagious
+                if (!zombie.onFire || (zombie.onFire && zombie.fireSpreadTimer > 0)) {
+                    setGameOver(true);
+                }
             }
         });
     

@@ -72,18 +72,13 @@ export class Bullet {
         for (let i = 0; i < gameSettings.zombies.length; i++) {
             const zombie = gameSettings.zombies[i];
 
-            // Skip hit detection if the zombie is on fire
-            if (zombie.onFire) {
-                continue;
-            }
-
-            if (!zombie.isDead && this.pos.distance(zombie.pos) < 1) {
-                if (this.fireAbility) {
-                    zombie.catchFire(); // Set zombie on fire and play fire effect
-                    sound_fire.play(this.pos);
-                } else {
-                    // Check if the zombie is a BossZombie
-                    if (zombie instanceof BossZombie) {
+            // Allow hits to register on BossZombie even when it is on fire
+            if (zombie instanceof BossZombie) {
+                if (!zombie.isDead && this.pos.distance(zombie.pos) < 1) {
+                    if (this.fireAbility && !zombie.onFire) {
+                        zombie.catchFire(); // Set zombie on fire and play fire effect
+                        sound_fire.play(this.pos);
+                    } else {
                         zombie.takeHit(10); // Apply damage (e.g., 10 points of damage)
                         
                         if (zombie.isDead) {
@@ -92,13 +87,35 @@ export class Bullet {
                             incrementScore(); // Increment score when the BossZombie dies
                             addCurrency(5); // Increase currency using the setter when the BossZombie dies
                         }
-                    } else {
-                        // Regular zombies die immediately
-                        zombie.isDead = true; 
-                        killCount++;
-                        incrementScore(); // Increment the score using the function
-                        addCurrency(1); // Increase currency using the setter
                     }
+
+                    zombie.deathTimer = 3; // Set death timer to 3 seconds
+
+                    // Play hit sound
+                    sound_hit.play(this.pos);
+
+                    // Create blood effect
+                    const bloodEmitter = makeBlood(this.pos);
+
+                    // Stop blood animation after 3 seconds
+                    setTimeout(() => {
+                        bloodEmitter.emitRate = 0;
+                    }, 3000);
+
+                    // Remove bullet
+                    gameSettings.bullets.splice(gameSettings.bullets.indexOf(this), 1);
+                    return;
+                }
+            } else if (!zombie.isDead && !zombie.onFire && this.pos.distance(zombie.pos) < 1) {
+                // For regular zombies, check if they are not on fire and handle hits
+                if (this.fireAbility) {
+                    zombie.catchFire(); // Set zombie on fire and play fire effect
+                    sound_fire.play(this.pos);
+                } else {
+                    zombie.isDead = true; 
+                    killCount++;
+                    incrementScore(); // Increment the score using the function
+                    addCurrency(1); // Increase currency using the setter
                 }
 
                 zombie.deathTimer = 3; // Set death timer to 3 seconds
