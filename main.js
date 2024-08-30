@@ -26,19 +26,13 @@ let comboMessage = {
 window.addEventListener('focus', () => {
     isWindowFocused = true;
     setPaused(false);
-    startSpawningZombies();
 });
-document.onvisibilitychange = function() {
-    if (document.visibilityState === 'hidden') {
-        isWindowFocused = false;
-        stopSpawningZombies();
-        setPaused(true);
-    }
-    else {
-        isWindowFocused = true;
-        setPaused(false);
-    }
-};
+// Event listener to clear focus flag when window loses focus
+window.addEventListener('blur', () => {
+    isWindowFocused = false;
+    setPaused(true);     // Don't update the game loop when the window is not in focus. Prevents crashing the browser when the tab is focused again due to zombies spawning because of the tick counter.
+});
+
 
 export const gameSettings = {
     zombieSpeed: 0.02,
