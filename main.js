@@ -6,6 +6,7 @@ import { setupBiomeCanvas, adjustCanvasSize, canvasState } from './CanvasUtils.j
 import { handleShopMouseClick, handleShopInput, drawShop, isInShop } from './shop.js';
 import { getCurrency, getScore, setScore, setCurrency } from './bullet.js';
 import { vec2, engineInit, cameraScale, rand, hsl, mouseWasPressed, drawTextScreen, mousePos, drawText, setPaused, keyWasPressed, keyIsDown } from './libs/littlejs.esm.min.js';
+import { BossZombie } from './boss.js'; // Ensure to import the BossZombie class
 
 let isWindowFocused = true; // Flag to check if window is focused
 let isEnteringUsername = false; // Flag to track if we're in the username input state
@@ -38,7 +39,6 @@ document.onvisibilitychange = function() {
         setPaused(false);
     }
 };
-
 
 export const gameSettings = {
     zombieSpeed: 0.02,
@@ -209,6 +209,18 @@ export function showComboMessage(comboCount, position) {
     comboMessage.active = true; // Set combo message active
 }
 
+function spawnBossZombie(position) {
+    // Create a new BossZombie instance
+    const bossZombie = new BossZombie(position);
+    
+    // Add the BossZombie to the zombies array in gameSettings
+    gameSettings.zombies.push(bossZombie);
+    
+    console.log('BossZombie spawned at position:', position);
+}
+
+let lastBossCurrencyThreshold = 0; // Tracks the last currency threshold at which a boss was spawned
+
 function spawnZombie() {
     if (!isWindowFocused) return;
     if (isInShop() || gameState.gameOver) return;
@@ -234,6 +246,14 @@ function spawnZombie() {
             break;
     }
 
+    // Check if it's time to spawn a boss zombie based on currency
+    const currency = getCurrency();
+    if (currency >= 10 && currency % 10 === 0 && currency !== lastBossCurrencyThreshold) {
+        spawnBossZombie(pos);
+        lastBossCurrencyThreshold = currency; // Update the last currency threshold
+        return; // Exit the function to avoid spawning a regular zombie
+    }
+
     const randomValue = Math.random();
     if (randomValue < 0.1) {
         gameSettings.zombies.push(new Boomer(pos));
@@ -243,7 +263,6 @@ function spawnZombie() {
         gameSettings.zombies.push(new Zombie(pos));
     }
 }
-
 function gameUpdatePost() {
     // If needed for any post-update operations
 }
@@ -272,6 +291,7 @@ function handleUsernameInput() {
         }
     }
 }
+
 // Function to save the score to the local storage leaderboard with custom namespace
 function saveScore(username, score) {
     const leaderboardKey = 'Evacu13tion_leaderboard';

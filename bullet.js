@@ -2,6 +2,7 @@ import { gameSettings, startSpawningZombies, stopSpawningZombies } from './main.
 import { sound_hit, sound_fire } from './sound.js';
 import { makeBlood } from './effects.js';
 import { setGameOver } from './zombie.js';
+import { BossZombie } from './boss.js';
 import { vec2, mainCanvas, drawRect, hsl, cameraScale } from './libs/littlejs.esm.min.js';
 
 let killCount = 0;
@@ -80,14 +81,27 @@ export class Bullet {
                 if (this.fireAbility) {
                     zombie.catchFire(); // Set zombie on fire and play fire effect
                     sound_fire.play(this.pos);
-                }  else {
-                    zombie.isDead = true;
+                } else {
+                    // Check if the zombie is a BossZombie
+                    if (zombie instanceof BossZombie) {
+                        zombie.takeHit(10); // Apply damage (e.g., 10 points of damage)
+                        
+                        if (zombie.isDead) {
+                            // If BossZombie's health reaches zero after the hit
+                            killCount++;
+                            incrementScore(); // Increment score when the BossZombie dies
+                            addCurrency(5); // Increase currency using the setter when the BossZombie dies
+                        }
+                    } else {
+                        // Regular zombies die immediately
+                        zombie.isDead = true; 
+                        killCount++;
+                        incrementScore(); // Increment the score using the function
+                        addCurrency(1); // Increase currency using the setter
+                    }
                 }
-                zombie.deathTimer = 3; // Set death timer to 3 seconds
-                incrementScore(); // Increment the score using the function
-                addCurrency(1); // Increase currency using the setter
 
-                killCount++; // Increase kill count
+                zombie.deathTimer = 3; // Set death timer to 3 seconds
 
                 // Play hit sound
                 sound_hit.play(this.pos);

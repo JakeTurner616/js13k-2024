@@ -392,7 +392,6 @@ export class Boomer extends Zombie {
     explode() {
         addCurrency(1);
         this.bloodEmitter = makeBlood(this.pos, 10);
-        
         this.explosionEmitter = makeExplosion(this.pos, 200);
         sound_explode.play(this.pos);
     
@@ -401,8 +400,8 @@ export class Boomer extends Zombie {
     
         gameSettings.zombies.forEach(zombie => {
             if (this.pos.distance(zombie.pos) < EXPLOSION_RADIUS) {
-                if (zombie !== this && !zombie.isDead) {
-                    zombie.catchFire();
+                if (zombie !== this && !zombie.isDead && typeof zombie.takeExplosionDamage === 'function') {
+                    zombie.takeExplosionDamage(); // Call the method to handle explosion damage
                     comboCount++;
                 }
             }
@@ -410,11 +409,9 @@ export class Boomer extends Zombie {
     
         if (comboCount >= comboThreshold) {
             console.log(`Combo x${comboCount}`);
-            incrementScore(1 * comboCount); // Increment score 
-            
-            // Convert explosion position to vec2 for combo message
+            incrementScore(1 * comboCount);
             const comboPosition = new vec2(this.pos.x, this.pos.y);
-            showComboMessage(comboCount, comboPosition); // Pass vec2 position
+            showComboMessage(comboCount, comboPosition);
         }
     
         if (this.pos.distance(player.pos) < EXPLOSION_RADIUS) {
@@ -429,7 +426,6 @@ export class Boomer extends Zombie {
     
         this.deathTimer = 0;
     }
-
     freezeArms() {
         // Freeze the current positions of the arms when Boomer is shot and starts to explode
         this.frozenLeftArm = this.getCurrentArmPosition(-1);
