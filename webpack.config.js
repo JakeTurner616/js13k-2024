@@ -3,6 +3,7 @@ const TerserPlugin = require('terser-webpack-plugin');
 const { execSync } = require('child_process');
 const fs = require('fs');
 const { Packer } = require('roadroller'); // Use Packer instead of compress
+const { strict } = require('assert'); // Use strict mode for mangle properties
 
 module.exports = {
   mode: 'production',
@@ -35,7 +36,7 @@ module.exports = {
             toplevel: true,
             properties: {
               regex: /^[a-zA-Z_]\w*$/,  // Mangle all properties that match this regex
-              keep_quoted: true,  // Do not mangle properties in quotes
+              keep_quoted: strict,  // Do not mangle properties in quotes
             },
           },
         },

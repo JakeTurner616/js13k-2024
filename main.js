@@ -248,7 +248,7 @@ function spawnZombie() {
 
     // Check if it's time to spawn a boss zombie based on currency
     const currency = getCurrency();
-    if (currency >= 10 && currency % 10 === 0 && currency !== lastBossCurrencyThreshold) {
+    if (currency >= 8 && currency % 8 === 0 && currency !== lastBossCurrencyThreshold) {
         spawnBossZombie(pos);
         lastBossCurrencyThreshold = currency; // Update the last currency threshold
         return; // Exit the function to avoid spawning a regular zombie
@@ -294,37 +294,58 @@ function handleUsernameInput() {
 
 // Function to save the score to the local storage leaderboard with custom namespace
 function saveScore(username, score) {
-    const leaderboardKey = 'Evacu13tion_leaderboard';
-    let leaderboard = JSON.parse(localStorage.getItem(leaderboardKey)) || [];
+    try {
 
-    leaderboard.push({ username, score });
-    leaderboard.sort((a, b) => b.score - a.score);
 
-    localStorage.setItem(leaderboardKey, JSON.stringify(leaderboard));
+        if (typeof window == 'undefined') {
+            return;
+        }
+        const leaderboardKey = 'Evacu13tion';
+        // Safely parse the leaderboard from localStorage or initialize an empty array if null
+        let leaderboard = JSON.parse(window.localStorage.getItem(leaderboardKey)) || [];
+
+        // Add new score and sort the leaderboard
+        leaderboard.push({ username, score });
+        leaderboard.sort((a, b) => b.score - a.score);
+
+        // Store the updated leaderboard back into localStorage
+        window.localStorage.setItem(leaderboardKey, JSON.stringify(leaderboard));
+    } catch (e) {
+        console.error("Failed to save score:", e);
+        // Optionally handle the error further or alert the user
+    }
 }
 
 // Function to draw the leaderboard
 function drawLeaderboard() {
-    const leaderboardKey = 'Evacu13tion_leaderboard';
-    const leaderboard = JSON.parse(localStorage.getItem(leaderboardKey)) || [];
+    try {
+        if (typeof window == 'undefined') {
+            return;
+            
+        }
+        const leaderboardKey = 'Evacu13tion';
+        // Safely parse the leaderboard from localStorage or use an empty array if null
+        const leaderboard = JSON.parse(window.localStorage.getItem(leaderboardKey)) || [];
 
-    let yOffset = gameSettings.mapCanvas.height / 2 - 60; // Starting Y position for leaderboard display
+        let yOffset = gameSettings.mapCanvas.height / 2 - 60; // Starting Y position for leaderboard display
 
-    drawTextScreen(
-        'Leaderboard:',
-        vec2(gameSettings.mapCanvas.width / 2 , yOffset - 250),
-        30, hsl(0, 0, 1), 10, hsl(0, 0, 0)
-    );
-
-    leaderboard.slice(0, 5).forEach((entry, index) => {
-        yOffset += 40; // Increase Y offset for each entry
         drawTextScreen(
-            `${index + 1}. ${entry.username} - ${entry.score}`,
+            'Leaderboard:',
             vec2(gameSettings.mapCanvas.width / 2 , yOffset - 250),
-            25, hsl(0, 0, 1), 10, hsl(0, 0, 0)
+            30, hsl(0, 0, 1), 10, hsl(0, 0, 0)
         );
-       
-    });
+
+        // Display top 3 leaderboard entries
+        leaderboard.slice(0, 3).forEach((entry, index) => {
+            yOffset += 40; // Increase Y offset for each entry
+            drawTextScreen(
+                `${index + 1}. ${entry.username} - ${entry.score}`,
+                vec2(gameSettings.mapCanvas.width / 2 , yOffset - 250),
+                25, hsl(0, 0, 1), 10, hsl(0, 0, 0)
+            );
+        });
+    } catch (e) {
+    }
 }
 
 // Reset the game state

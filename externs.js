@@ -67,4 +67,6 @@ var oncontextmenu;
 /** @type {HTMLCanvasElement} */
 var mapCanvas;
 
-
+//window.localStorage var
+/** @type {Storage} */
+var localStorage;
