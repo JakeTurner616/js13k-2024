@@ -3,7 +3,8 @@ import { Bullet } from './bullet.js';
 import { sound_shoot, sound_reload } from './sound.js'; // Added sound_reload
 import { setGameOver, gameState } from './zombie.js';
 import { isInShop } from './shop.js';
-import { keyIsDown, keyWasPressed, mouseIsDown, mousePos, vec2, drawRect, drawLine, hsl, cameraScale } from './libs/littlejs.esm.min.js';
+import { keyIsDown, mouseIsDown, mousePos, vec2, drawRect, drawLine, hsl, cameraScale } from './libs/littlejs.esm.min.js';
+import { makeWalkingDust } from './effects.js';
 
 export class Player {
     constructor(pos) {
@@ -32,37 +33,9 @@ export class Player {
         this.clipFadeDuration = 4000; // Duration for the clip to fade out in milliseconds
         this.clipRotation = 0; // Rotation angle for the dropped clip
         this.lastAngle = 0; // Store the last angle
-    }
 
-    addItem(itemName) {
-        this.items.push(itemName);
-        
-        // Handle special cases for different items
-        if (itemName === 'Shotgun') {
-            this.weapon = itemName;
-            this.isAutomatic = this.items.includes('Machine Gun');
-            this.shootDelay = this.shotgunShootDelay; // Set shoot delay for Shotgun
-            this.magazineSize = 6; // Shotgun holds 6 shots
-            this.currentAmmo = Math.min(this.currentAmmo, this.magazineSize); // Adjust ammo if switching from a different weapon
-
-        } else if (itemName === 'Machine Gun') {
-            this.weapon = itemName;
-            this.isAutomatic = true; // Machine Gun is always automatic
-            this.shootDelay = this.machineGunShootDelay; // Use machine gun specific shoot delay
-            this.magazineSize = 13; // Machine Gun holds 13 shots
-            this.currentAmmo = this.magazineSize; // Fill ammo to the full magazine size
-
-            // If the player already has a Shotgun, set it to automatic as well
-            if (this.items.includes('Shotgun')) {
-                this.weapon = 'Shotgun'; // Prioritize the Shotgun if already equipped
-                this.isAutomatic = true; // Ensure automatic firing mode is enabled for the shotgun as well
-                this.shootDelay = this.shotgunShootDelay; // Use shotgun-specific delay for automatic shotgun
-                this.magazineSize = 6; // Reset magazine size for shotgun
-                this.currentAmmo = Math.min(this.currentAmmo, this.magazineSize); // Adjust ammo if switching from machine gun
-            }
-        } else if (itemName === 'Fire Ability') {
-            this.fireAbility = true;
-        } 
+        // New property to track player movement state
+        this.isMoving = false;
     }
 
     update() {
@@ -70,11 +43,30 @@ export class Player {
     
         // Player movement logic
         const moveSpeed = 0.1;
-        if (keyIsDown('ArrowLeft')) this.pos.x -= moveSpeed; // left arrow
-        if (keyIsDown('ArrowRight')) this.pos.x += moveSpeed; // right arrow
-        if (keyIsDown('ArrowUp')) this.pos.y += moveSpeed; // up arrow
-        if (keyIsDown('ArrowDown')) this.pos.y -= moveSpeed; // down arrow
+        let moved = false; // Track if the player has moved this frame
+        
+        if (keyIsDown('ArrowLeft')) {
+            this.pos.x -= moveSpeed; // left arrow
+            moved = true; // Mark as moved
+        }
+        if (keyIsDown('ArrowRight')) {
+            this.pos.x += moveSpeed; // right arrow
+            moved = true; // Mark as moved
+        }
+        if (keyIsDown('ArrowUp')) {
+            this.pos.y += moveSpeed; // up arrow
+            moved = true; // Mark as moved
+        }
+        if (keyIsDown('ArrowDown')) {
+            this.pos.y -= moveSpeed; // down arrow
+            moved = true; // Mark as moved
+        }
     
+
+    
+        // Update the player's movement state
+        this.isMoving = moved;
+
         // Check for manual reload with 'R' key
         if (keyIsDown('KeyR') && !this.isReloading && this.currentAmmo < this.magazineSize) {
             this.reload();
@@ -94,6 +86,7 @@ export class Player {
             if (!zombie.isDead && this.pos.distance(zombie.pos) < 1) {
                 // Set game over if the zombie is alive and not on fire or if it's on fire and still contagious
                 if (!zombie.onFire || (zombie.onFire && zombie.fireSpreadTimer > 0)) {
+                    this.isMoving = false;
                     setGameOver(true);
                 }
             }
@@ -124,6 +117,21 @@ export class Player {
             if (this.clipDropTime > this.clipFadeDuration) {
                 this.clipDropped = false; // Clip has faded out completely
             }
+        }
+                // Emit walking dust particles if the player is moving
+        // Emit walking dust particles slightly behind the player if the player has moved
+        const moveDirection = vec2(0, 0); // Initialize the move direction
+        if (this.isMoving) {
+            const offsetDistance = 0.4; // Distance to offset the particles behind the player
+            const normalizedDirection = moveDirection.normalize().scale(-offsetDistance); // Calculate the offset position behind the player
+            const particlePos = this.pos.add(normalizedDirection); // Calculate the position to emit particles
+            setTimeout(() => {
+                makeWalkingDust(particlePos); // Emit particles at the calculated position
+            }, 100);
+
+            this.lastMoveDirection = moveDirection; // Update last move direction
+            return; // Exit the function early to prevent emitting particles at the player's position
+
         }
     }
 
@@ -215,6 +223,7 @@ export class Player {
             gunLength = 1.0;
             gunColor = hsl(0, 0, 0); // Black color for Machine Gun
         }
+
 
         // Draw the dropped clip first to ensure it's below the player
         if (this.clipDropped) {

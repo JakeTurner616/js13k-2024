@@ -22,15 +22,20 @@ let comboMessage = {
     fadeTime: 1.5, // Duration in seconds for which the message stays on screen
 };
 
-// Event listeners for focus management
+// Initialize focus state based on the current document focus
+isWindowFocused = document.hasFocus();
+setPaused(!isWindowFocused); // Pause if not focused
+
+// Event listener to resume game when the window gains focus
 window.addEventListener('focus', () => {
     isWindowFocused = true;
     setPaused(false);
 });
-// Event listener to clear focus flag when window loses focus
+
+// Event listener to pause game when the window loses focus
 window.addEventListener('blur', () => {
     isWindowFocused = false;
-    setPaused(true);     // Don't update the game loop when the window is not in focus. Prevents crashing the browser when the tab is focused again due to zombies spawning because of the tick counter.
+    setPaused(true);
 });
 
 

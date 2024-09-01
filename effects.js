@@ -55,20 +55,20 @@ export function makeExplosion(pos, amount = 10) {
     return emitter;
 }
 
-export function makeIce(pos, amount = 20) {
+export function makeWalkingDust(pos, amount = 1) {
     const emitter = new ParticleEmitter(
-        pos, 0, 0.5, 0, amount, 2 * PI,
+        pos, 0.3, 0.2, 0.35, amount, PI , // Small spread for walking effect
         undefined,
-        new Color(0, 0.5, 1), new Color(0, 0.25, 1),
-        new Color(0, 0, 1, 0), new Color(0, 0, 1, 0),
-        2, 0.2, 0.5, 0.3, 0.05,
-        0.9, 0.9, 0.3, PI, 0.1,
-        1.5, false, true, 0
+        new Color(0.5, 0.4, 0.3), new Color(0.6, 0.5, 0.4), // Dust colors
+        new Color(0.5, 0.4, 0.3, 0), new Color(0.6, 0.5, 0.4, 0), // Fade-out colors
+        0.2, 0.1, 0.5, 0.1, 0.02, // Particle life and size
+        0.8, 0.7, 0.1, PI, 0.05, // Gravity and speed
+        0.3, true, false, true, 0, false
     );
 
-    emitter.elasticity = 0.5;
-    emitter.trailScale = 0.2;
-    emitter.fadeRate = 0.05;
+    emitter.elasticity = 0;
+    emitter.trailScale = 3;
+    emitter.fadeRate = 0.85;
 
     return emitter;
 }
