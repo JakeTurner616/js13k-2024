@@ -226,10 +226,24 @@ function spawnZombie() {
 
     const halfCanvasWidth = (gameSettings.mapCanvas.width / 2) / cameraScale;
     const halfCanvasHeight = (gameSettings.mapCanvas.height / 2) / cameraScale;
-    const spawnMargin = 2;
+    let spawnMargin = 2; // Default spawn margin
     const edge = Math.floor(Math.random() * 4);
     let pos;
 
+    const randomValue = Math.random();
+    let zombieType; // Variable to store the zombie type for further calculations
+
+    // Determine zombie type and adjust spawn margin if necessary
+    if (randomValue < 0.1) {
+        zombieType = Boomer;
+    } else if (randomValue < 0.2) {
+        zombieType = DeadlyDangler;
+        spawnMargin *= 2; // Double the spawn margin for Deadly Dangler
+    } else {
+        zombieType = Zombie;
+    }
+
+    // Calculate spawn position based on the edge and adjusted spawn margin
     switch (edge) {
         case 0:
             pos = vec2(rand(-halfCanvasWidth, halfCanvasWidth), halfCanvasHeight + spawnMargin);
@@ -253,14 +267,8 @@ function spawnZombie() {
         return; // Exit the function to avoid spawning a regular zombie
     }
 
-    const randomValue = Math.random();
-    if (randomValue < 0.1) {
-        gameSettings.zombies.push(new Boomer(pos));
-    } else if (randomValue < 0.2) {
-        gameSettings.zombies.push(new DeadlyDangler(pos));
-    } else {
-        gameSettings.zombies.push(new Zombie(pos));
-    }
+    // Spawn the determined zombie type
+    gameSettings.zombies.push(new zombieType(pos));
 }
 function gameUpdatePost() {
     // If needed for any post-update operations

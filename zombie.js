@@ -1,49 +1,46 @@
 import { makeBlood, makeFire, makeExplosion } from './effects.js';
-import { sound_explode } from './sound.js';
+import { sound_explode, sound_bat_hit} from './sound.js';
 import { player } from './main.js';
 import { EXPLOSION_RADIUS, gameSettings } from './main.js';
 import { vec2, drawRect, hsl, drawLine, PI } from './libs/littlejs.esm.min.js';
-import { incrementScore, addCurrency } from './bullet.js'; // Increment the score for area of effect attacks only
-import { showComboMessage } from './main.js'; // Import the function to show combo messages
+import { incrementScore, addCurrency } from './bullet.js'; 
+import { showComboMessage } from './main.js'; 
 
 export const gameState = {
     gameOver: false
 };
 
 export function setGameOver(value) {
-    gameState.gameOver = value; // Modify the property, not the object itself
+    gameState.gameOver = value; 
     return gameState.gameOver;
 }
 
 // Define global variables to manage combos
 let comboChains = [];
-const MAX_CHAIN_DURATION = 3; // Max duration (in seconds) to count zombies in a chain
-const COMBO_DISTANCE_THRESHOLD = 1; // Distance to differentiate different combo chains
+const MAX_CHAIN_DURATION = 3; 
+const COMBO_DISTANCE_THRESHOLD = 1; 
 
-// Function to start a new combo chain
 function startComboChain(zombie) {
     const newChain = {
         zombies: new Set([zombie]),
         startTime: Date.now(),
-        lastZombiePosition: new vec2(zombie.pos.x, zombie.pos.y), // Create a new vec2 instance with the same coordinates
+        lastZombiePosition: new vec2(zombie.pos.x, zombie.pos.y), 
     };
     comboChains.push(newChain);
 }
 
-// Function to add a zombie to an existing chain
 function addToComboChain(chain, zombie) {
     chain.zombies.add(zombie);
-    chain.lastZombiePosition = new vec2(zombie.pos.x, zombie.pos.y); // Create a new vec2 instance with the same coordinates
+    chain.lastZombiePosition = new vec2(zombie.pos.x, zombie.pos.y); 
 }
 
-// Function to check if a zombie is within combo distance of any chain
 function findNearestChain(zombie) {
     let nearestChain = null;
     let shortestDistance = COMBO_DISTANCE_THRESHOLD;
     
     comboChains.forEach(chain => {
         chain.zombies.forEach(z => {
-            const distance = z.pos.distance(zombie.pos); // Ensure distance method exists
+            const distance = z.pos.distance(zombie.pos); 
             if (distance < shortestDistance) {
                 shortestDistance = distance;
                 nearestChain = chain;
@@ -54,38 +51,33 @@ function findNearestChain(zombie) {
     return nearestChain;
 }
 
-// Function to finalize the combo chain and calculate score
-// Function to finalize the combo chain and calculate score
 function finalizeComboChain(chain) {
     const comboCount = chain.zombies.size;
     const comboPosition = chain.lastZombiePosition;
 
-    // Only display a combo message if the combo count is 2 or higher
     if (comboCount >= 2) {
-        const multiplier = comboCount; // Score multiplier based on combo count
+        const multiplier = comboCount; 
 
-        incrementScore(multiplier); // Increment score with the calculated multiplier
-        showComboMessage(comboCount, comboPosition); // Display the combo message
+        incrementScore(multiplier); 
+        showComboMessage(comboCount, comboPosition); 
 
         console.log(`Combo chain ended with ${comboCount} zombies. Multiplier: x${multiplier}`);
     }
 }
 
-// Function to update combo chains (called periodically)
 function updateComboChains() {
     const currentTime = Date.now();
     comboChains = comboChains.filter(chain => {
-        const duration = (currentTime - chain.startTime) / 1000; // Convert to seconds
+        const duration = (currentTime - chain.startTime) / 1000; 
         if (duration >= MAX_CHAIN_DURATION) {
-            finalizeComboChain(chain); // Finalize and calculate score for expired chains
-            return false; // Remove chain from active list
+            finalizeComboChain(chain); 
+            return false; 
         }
         return true;
     });
 }
 
-// Ensure the updateComboChains function is called periodically
-setInterval(updateComboChains, 100); // Update combo chains every 100 ms
+setInterval(updateComboChains, 100); 
 
 export class Zombie {
     constructor(pos) {
@@ -118,7 +110,7 @@ export class Zombie {
 
     update() {
         if (gameState.gameOver) return;
-
+    
         if (this.isDead) {
             this.handleDeathFadeOut(); // Handle fading out when zombie is dead
         } else if (this.onFire) {
@@ -225,7 +217,6 @@ export class Zombie {
         }
     }
     
-
     avoidCollisions() { // Poor mans pathfinding
         gameSettings.zombies.forEach(otherZombie => {
             if (otherZombie !== this && !otherZombie.isDead && this.pos.distance(otherZombie.pos) < 1) {
@@ -237,14 +228,11 @@ export class Zombie {
 
     render() {
         let opacity = 1;
-        if (this.isDead) {
+        if (this.isDead || (this.onFire && this.fadeOutTimer <= 4)) {
             // Start fading only after contagious period or upon normal death
             opacity = this.fadeOutTimer / 4;
-        } else if (this.onFire && this.fireSpreadTimer <= 0) {
-            // Start fading only after contagious period is over
-            opacity = this.fadeOutTimer / 4;
         }
-
+    
         if (this.isDead) {
             drawRect(this.pos, vec2(1, 1), hsl(0, 0, 0.2, opacity));
         } else if (this.onFire) {
@@ -252,7 +240,7 @@ export class Zombie {
         } else {
             drawRect(this.pos, vec2(1, 1), hsl(0.3, 1, 0.5));
         }
-
+    
         // Draw arms with zombie-like movement
         this.renderArms(opacity);
     }
@@ -318,6 +306,19 @@ export class Zombie {
         // Start the fade-out process
         this.fadeOutTimer = 4; // Set the fade-out timer to 4 seconds after death
     }
+
+    kill() {
+        if (!this.isDead) {
+            console.log('Zombie killed via bat!');
+            sound_bat_hit.play(this.pos); // Play hit sound
+            incrementScore(); // Increment the score using the function
+            addCurrency(1); // Increase currency using the setter
+            this.isDead = true; // Set the zombie as dead
+            this.deathTimer = 3; // Set the death timer to 3 seconds
+            makeBlood(this.pos); // Create blood effect at zombie's position
+
+        }
+    }
 }
 
 
@@ -333,6 +334,9 @@ export class Boomer extends Zombie {
         this.exploding = false;
         this.bloodEmitter = null;
         this.explosionEmitter = null;
+        this.isFlickering = false; // New property to track flickering state
+        this.flickerTimer = 0; // Timer to manage flickering duration
+        this.flickerDuration = 2; // Total duration of the flickering effect
 
         // Arm properties for Boomer-like movement
         this.armLength = 1.2 + (Math.random() * 0.4); // Total length of each arm with random variation
@@ -357,6 +361,10 @@ export class Boomer extends Zombie {
         if (gameState.gameOver) return;
 
         if (!this.isDead) {
+            if (this.isFlickering) {
+                this.updateFlickerState(); // Update flickering state
+            }
+
             // Decrement the frame delay counter before starting the animation
             if (this.frameDelay > 0) {
                 this.frameDelay--;
@@ -376,19 +384,29 @@ export class Boomer extends Zombie {
         }
     }
 
-    handleFireState() {
-        // If the Boomer is on fire, manage the fire spreading and explosion
-        if (this.fireSpreadTimer > 0) {
-            this.spreadFire();  // Spread fire if the fire spread timer is active
-            this.fireSpreadTimer -= 1 / 60;  // Decrement the fire spread timer each frame
-        } else if (!this.isDead && this.onFire) {
-            // After contagious period, Boomer should explode if it's on fire
-            this.isDead = true;
-            this.explode();
+    boomerHitByBat() {
+        if (!this.isFlickering && !this.isDead) {
+            console.log('Boomer hit by bat!');
+            this.isFlickering = true;
+            this.flickerTimer = 0; // Reset flicker timer
+            sound_bat_hit.play(this.pos); // Play punch sound when hit
+            this.speed = 0; // Stop Boomer movement when hit
+            
+            // Freeze the Boomer and its arms in place
+            this.freezeArms();
         }
     }
 
+    updateFlickerState() {
+        this.flickerTimer += 1 / 60; // Increment the timer (assuming 60 FPS)
+        if (this.flickerTimer >= this.flickerDuration) {
+            this.isFlickering = false; // Stop flickering after duration ends
+            this.explode(); // Trigger explosion after flickering ends
+        }
+    }
     explode() {
+        
+        console.log('Boomer exploded called!');
         // Adds currency and effects
         addCurrency(1);
         this.bloodEmitter = makeBlood(this.pos, 10);
@@ -436,52 +454,23 @@ export class Boomer extends Zombie {
             addCurrency(1);
             if (this.bloodEmitter) this.bloodEmitter.emitRate = 0;
             if (this.explosionEmitter) this.explosionEmitter.emitRate = 0;
+            this.exploding = false;
         }, 1000);
     
         this.deathTimer = 0; // Reset death timer
+        this.isDead = true; // Set Boomer as dead
     }
-    freezeArms() {
-        // Freeze the current positions of the arms when Boomer is shot and starts to explode
-        this.frozenLeftArm = this.getCurrentArmPosition(-1);
-        this.frozenRightArm = this.getCurrentArmPosition(1);
-    }
-
-    getCurrentArmPosition(side) {
-    // Calculate direction to player
-    const directionToPlayer = player.pos.subtract(this.pos).normalize();
-    const angleToPlayer = Math.atan2(directionToPlayer.y, directionToPlayer.x);
-
-    // Adjust the base position for the arms to track the player
-    const armBaseOffset = vec2(Math.cos(angleToPlayer + Math.PI / 2 * side), Math.sin(angleToPlayer + Math.PI / 2 * side)).scale(0.5);
-    const basePos = this.pos.add(armBaseOffset);
-
-    // Lengths of each arm segment
-    const upperArmLength = this.armLength * 0.5;
-    const forearmLength = this.armLength * 0.5;
-
-    // Oscillate arm angles to create a zombie-like staggered effect
-    const upperArmAngle = angleToPlayer + Math.sin(this.time + this.armDelay) * (this.maxArmAngle - this.minArmAngle);
-    const forearmAngle = upperArmAngle + Math.sin(this.time + this.armDelay + Math.PI / 4) * (this.maxArmAngle - this.minArmAngle);
-
-    // Calculate end position of the upper arm
-    const upperArmEnd = basePos.add(vec2(Math.cos(upperArmAngle), Math.sin(upperArmAngle)).scale(upperArmLength));
-
-    // Calculate end position of the forearm
-    const forearmEnd = upperArmEnd.add(vec2(Math.cos(forearmAngle), Math.sin(forearmAngle)).scale(forearmLength));
-
-    // Return the calculated positions
-    return { upperStart: basePos, upperEnd: upperArmEnd, foreEnd: forearmEnd };
-    }
-
+    
     render() {
         let color;
         if (this.isDead) {
             if (this.exploding) {
                 this.bombFlickerEffect(); // Flicker effect during explosion
+
                 return;
-            } else {
-                color = hsl(0, 0, 0.2); // Grey color when dead and not yet exploded
-            }
+            } 
+        } else if (this.isFlickering) {
+            color = Math.random() > 0.5 ? hsl(0.6, 1, 0.5) : hsl(0, 0, 0.2); // Flicker between colors
         } else if (this.onFire) {
             color = hsl(0.1, 1, 0.5); // Burning color
         } else {
@@ -497,17 +486,47 @@ export class Boomer extends Zombie {
             // Flash arms with the body
             this.drawFrozenArm(this.frozenLeftArm, color);
             this.drawFrozenArm(this.frozenRightArm, color);
-        } else if (this.isDead) {
-            // If Boomer is dead but not exploded yet, use frozen arm positions
+        } else if (this.isDead || this.isFlickering) {
+            // If Boomer is dead or flickering, use frozen arm positions
             this.drawFrozenArm(this.frozenLeftArm, color);
             this.drawFrozenArm(this.frozenRightArm, color);
         } else {
-            // If Boomer is alive, animate arms
+            // If Boomer is alive and not flickering, animate arms
             this.drawArm(1, color);  // Right arm
             this.drawArm(-1, color); // Left arm
         }
     }
-
+    freezeArms() {
+        // Freeze the current positions of the arms when Boomer is hit or explodes
+        this.frozenLeftArm = this.getCurrentArmPosition(-1);
+        this.frozenRightArm = this.getCurrentArmPosition(1);
+    }
+    getCurrentArmPosition(side) {
+        // Calculate direction to player
+        const directionToPlayer = player.pos.subtract(this.pos).normalize();
+        const angleToPlayer = Math.atan2(directionToPlayer.y, directionToPlayer.x);
+    
+        // Adjust the base position for the arms to track the player
+        const armBaseOffset = vec2(Math.cos(angleToPlayer + Math.PI / 2 * side), Math.sin(angleToPlayer + Math.PI / 2 * side)).scale(0.5);
+        const basePos = this.pos.add(armBaseOffset);
+    
+        // Lengths of each arm segment
+        const upperArmLength = this.armLength * 0.5;
+        const forearmLength = this.armLength * 0.5;
+    
+        // Oscillate arm angles to create a zombie-like staggered effect
+        const upperArmAngle = angleToPlayer + Math.sin(this.time + this.armDelay) * (this.maxArmAngle - this.minArmAngle);
+        const forearmAngle = upperArmAngle + Math.sin(this.time + this.armDelay + Math.PI / 4) * (this.maxArmAngle - this.minArmAngle);
+    
+        // Calculate end position of the upper arm
+        const upperArmEnd = basePos.add(vec2(Math.cos(upperArmAngle), Math.sin(upperArmAngle)).scale(upperArmLength));
+    
+        // Calculate end position of the forearm
+        const forearmEnd = upperArmEnd.add(vec2(Math.cos(forearmAngle), Math.sin(forearmAngle)).scale(forearmLength));
+    
+        // Return the calculated positions
+        return { upperStart: basePos, upperEnd: upperArmEnd, foreEnd: forearmEnd };
+        }
     drawFrozenArm(arm, color) {
         if (arm) {
             drawLine(arm.upperStart, arm.upperEnd, this.armThickness, color); // Use the color for the frozen arm
@@ -581,9 +600,9 @@ export class DeadlyDangler extends Zombie {
             this.onFire = true;
             this.fireEmitter = makeFire(this.pos); // Start the fire effect immediately
             this.fireSpreadTimer = 2; // Fire spread timer set for 2 seconds
-            console.log("DeadlyDangler caught fire!");
+            console.log("Zombie caught fire!");
     
-            // Increment score and currency when the DeadlyDangler catches fire
+            // Increment score and currency when the zombie catches fire
             incrementScore(1);
             addCurrency(1);
     
@@ -597,9 +616,11 @@ export class DeadlyDangler extends Zombie {
     
             // Adjust behavior if needed (e.g., stop movement)
             this.speed = 0; // Stop the zombie from moving when it's on fire
-            
-            // Additional logic for handling fire state specific to DeadlyDangler if needed
-            // For example, play specific sounds or trigger special animations
+    
+            // Start fade out process when fire spreading is done
+            setTimeout(() => {
+                this.startFadeOut();
+            }, this.fireSpreadTimer * 1000); // Start fade out after fire spread time
         }
     }
     generateRandomFactors() {
