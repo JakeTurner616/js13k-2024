@@ -10,12 +10,13 @@ export function isInShop() {
 }
 
 // Updated items list with the Pistol
-const items = [
-    { name: 'Shotgun', cost: 10 },
-    { name: 'Machine Gun', cost: 10 },
-    { name: 'Fire Ability', cost: 5 },
-    { name: 'Pistol', cost: 1 } // New item added here
+export const items = [
+    { name: 'Pistol', cost: 10, purchased: false },
+    { name: 'Machine Gun', cost: 30, purchased: false },
+    { name: 'Shotgun', cost: 50, purchased: false },
+    { name: 'Fire Ability', cost: 75, purchased: false },
 ];
+
 
 export function setInShop(status) {
     inShop = status;
@@ -92,9 +93,10 @@ export function exitShop() {
 }
 
 function buyItem(item) {
-    if (getCurrency() >= item.cost) {
+    if (getCurrency() >= item.cost && !item.purchased) {
         setCurrency(getCurrency() - item.cost);
         player.addItem(item.name); // Add item to player's inventory
+        item.purchased = true; // Mark item as purchased
 
         if (item.name === 'Pistol' || item.name === 'Shotgun' || item.name === 'Machine Gun') {
             player.weapon = item.name; // Automatically switch to the new weapon if it's a gun

@@ -35,7 +35,44 @@ export function makeFire(pos, amount = 80) {
 
     return emitter;
 }
+export function makeMuzzleSmoke(pos, amount = 10, direction) {
+    const emitter = new ParticleEmitter(
+        pos, 0, 0.3, 0.2, amount, direction, // Use direction for the emission angle
+        undefined,
+        new Color(.1, .1, .1), new Color(0, 0, 0), // Bright yellow to orange color
+        new Color(0.5, 0.5, 0.5, 0), new Color(0.5, 0.5, 0.5, 0), // Fade out to grey and transparent
+        3, 0.5, 0.7, 0.2, 0.1, // Larger initial scale, fades out quickly
+        0.5, 0.2, 0.5, Math.PI / 4, 0.2, // Small spread, rapid dissipation
+        1.5, true, false, true, 0, false // Trail effect
+    );
 
+    emitter.elasticity = 0.05;
+    emitter.trailScale = 0.01;
+    emitter.fadeRate = 0.8; // Fade faster to make the effect shorter-lived
+
+    return emitter;
+}
+export function makeMuzzleFlash(pos, amount, direction) {
+    const forwardSpreadAngle = Math.PI / 36; // Small spread angle for forward cone effect
+
+    const randomAngle = direction + (Math.random() - 0.4) * forwardSpreadAngle; // Narrow the angle for forward direction
+    const emitter = new ParticleEmitter(
+        pos, 1, 0.5, 0.6, amount, randomAngle, // Use the adjusted random angle to maintain forward shooting
+        undefined,
+        new Color(1, 1, 0.5), new Color(1, 0.8, 0), // Bright yellow to orange color
+        new Color(1, 0.5, 0, 0), new Color(1, 0.5, 0, 0), // Fade to transparent
+        0.3, 0.1, 0.2, 0.1, 0.5, // Small particles that fade quickly
+        0.9, 0.3, 0.5, randomAngle, 0.2, // Spread effect with minimal angle variation
+        1.2, true, false, true, 0, false // Trail effect
+    );
+
+    emitter.elasticity = 2;
+    emitter.trailScale = 0.5;
+    emitter.fadeRate = 1; // Fast fading for quick muzzle flash
+
+    return emitter;
+
+}
 export function makeExplosion(pos, amount = 10) {
     const emitter = new ParticleEmitter(
         pos, 0, 0.5, 0, amount, 2 * PI,
@@ -51,13 +88,13 @@ export function makeExplosion(pos, amount = 10) {
     emitter.trailScale = 0.2;
     emitter.fadeRate = 0.05;
 
-    
+
     return emitter;
 }
 
 export function makeWalkingDust(pos, amount = 1) {
     const emitter = new ParticleEmitter(
-        pos, 0.3, 0.2, 0.35, amount, PI , // Small spread for walking effect
+        pos, 0.3, 0.2, 0.35, amount, PI, // Small spread for walking effect
         undefined,
         new Color(0.5, 0.4, 0.3), new Color(0.6, 0.5, 0.4), // Dust colors
         new Color(0.5, 0.4, 0.3, 0), new Color(0.6, 0.5, 0.4, 0), // Fade-out colors

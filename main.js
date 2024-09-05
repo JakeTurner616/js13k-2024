@@ -3,23 +3,25 @@ import { generateBiomeMap } from './biomeGenerator.js';
 import { Player } from './player.js';
 import { Zombie, Boomer, gameState, DeadlyDangler } from './zombie.js';
 import { setupBiomeCanvas, adjustCanvasSize, canvasState } from './CanvasUtils.js';
-import { handleShopMouseClick, handleShopInput, drawShop, isInShop } from './shop.js';
+import { handleShopMouseClick, handleShopInput, drawShop, isInShop, items } from './shop.js';
 import { getCurrency, getScore, setScore, setCurrency } from './bullet.js';
-import { vec2, engineInit, cameraScale, rand, hsl, mouseWasPressed, drawTextScreen, mousePos, drawText, setPaused, keyWasPressed, keyIsDown } from './libs/littlejs.esm.min.js';
+import { vec2, engineInit, cameraScale, rand, hsl, mouseWasPressed, drawTextScreen, mousePos, drawText, setPaused, keyWasPressed } from './libs/littlejs.esm.min.js';
+import { sound_lvl_up, sound_combo } from './sound.js';
 import { BossZombie } from './boss.js'; // Ensure to import the BossZombie class
+let zombiesSpawned = 0; // Track how many zombies have been spawned
+const DANGER_THRESHOLD = 6; // Number of zombies to spawn before allowing Deadly Danglers
 
 let isWindowFocused = true; // Flag to check if window is focused
 let isEnteringUsername = false; // Flag to track if we're in the username input state
 let username = ''; // Store the inputted username
 let showLeaderboard = false; // Flag to show the leaderboard
-
 // Combo message state
 let comboMessage = {
     active: false,
     text: '',
     position: vec2(0, 0),
     displayTime: 0,
-    fadeTime: 1.5, // Duration in seconds for which the message stays on screen
+    fadeTime: 2.5, // Duration in seconds for which the message stays on screen
 };
 
 // Initialize focus state based on the current document focus
@@ -40,8 +42,10 @@ window.addEventListener('blur', () => {
 
 
 export const gameSettings = {
-    zombieSpeed: 0.02,
-    spawnRate: 1400,
+    zombieSpeed: 0.025, // Starting speed
+    spawnRate: 1400, // Initial spawn rate
+    speedIncrement: 0.001, // Speed increase per zombie spawn or score threshold
+    maxZombieSpeed: 0.1, // Maximum zombie speed cap
     zombies: [],
     bullets: [],
     mapCanvas: document.getElementById('mapCanvas'),
@@ -49,6 +53,7 @@ export const gameSettings = {
     mapCanvasWidth: mapCanvas.width,
     mapCanvasHeight: mapCanvas.height
 };
+
 
 export let player;
 export let spawnInterval;
@@ -164,6 +169,11 @@ function gameRender() {
     }
 }
 
+
+
+let beepedCurrencyLevels = []; // Array to track currency levels that triggered the beep
+const beepThresholds = [10, 30, 50, 75];
+
 function gameRenderPost() {
     if (!gameState.gameOver) {
         drawTextScreen(
@@ -171,9 +181,32 @@ function gameRenderPost() {
             vec2(gameSettings.mapCanvas.width / 2, 70), 40,
             hsl(0, 0, 1), 6, hsl(0, 0, 0)
         );
+
         const textPos = vec2(150, 70);
+        const currency = getCurrency();
+
+        // Check if the current currency matches any threshold and hasn't beeped yet
+        beepThresholds.forEach(threshold => {
+            if (currency >= threshold && !beepedCurrencyLevels.includes(threshold)) {
+                sound_lvl_up.play(); // Play the beep sound
+                beepedCurrencyLevels.push(threshold); // Mark this threshold as triggered
+            }
+        });
+
+        // Flash the `!` when the player can afford a new item
         if (!isInShop()) {
             drawTextScreen('Enter Shop', textPos, 30, hsl(0, 0, 1), 4, hsl(0, 0, 0));
+
+            // Flash the `!` for affordable items
+            const affordableItems = items.filter(item => currency >= item.cost && !item.purchased);
+            const lowestAffordableItem = affordableItems.length > 0 ? affordableItems[0] : null;
+            if (lowestAffordableItem && currency >= lowestAffordableItem.cost) {
+                const flashPeriod = 1; // Time period for flashing in seconds
+                const time = performance.now() / 1000;
+                if (Math.floor(time / flashPeriod) % 2 === 0) {
+                    drawTextScreen('!', vec2(textPos.x + 90, textPos.y), 40, hsl(0, 1, 0.5), 4, hsl(0, 0, 0));
+                }
+            }
         } else {
             drawTextScreen('Exit Shop', textPos, 30, hsl(0, 0, 1), 4, hsl(0, 0, 0));
         }
@@ -195,30 +228,32 @@ function gameRenderPost() {
         }
     }
 }
-
 // Function to show combo messages at specific positions
 export function showComboMessage(comboCount, position) {
     const positionVec = position instanceof vec2 ? position : new vec2(Math.floor(position.x), Math.floor(position.y));
-    
+
     console.log('Drawing combo message from main.js: ' + comboCount + ' at ', positionVec);
 
     comboMessage.text = `Combo x${comboCount}!`;
     comboMessage.position = positionVec;
     comboMessage.displayTime = comboMessage.fadeTime; // Reset display time
     comboMessage.active = true; // Set combo message active
+
+    // Play combo hit sound when a combo is shown
+    sound_combo.play();
 }
 
 function spawnBossZombie(position) {
     // Create a new BossZombie instance
     const bossZombie = new BossZombie(position);
-    
+
     // Add the BossZombie to the zombies array in gameSettings
     gameSettings.zombies.push(bossZombie);
-    
-    console.log('BossZombie spawned at position:', position);
+
+    //console.log('BossZombie spawned at position:', position);
 }
 
-let lastBossCurrencyThreshold = 0; // Tracks the last currency threshold at which a boss was spawned
+
 
 function spawnZombie() {
     if (!isWindowFocused) return;
@@ -226,24 +261,23 @@ function spawnZombie() {
 
     const halfCanvasWidth = (gameSettings.mapCanvas.width / 2) / cameraScale;
     const halfCanvasHeight = (gameSettings.mapCanvas.height / 2) / cameraScale;
-    let spawnMargin = 2; // Default spawn margin
+    let spawnMargin = 2;
     const edge = Math.floor(Math.random() * 4);
     let pos;
 
     const randomValue = Math.random();
-    let zombieType; // Variable to store the zombie type for further calculations
+    let zombieType;
 
-    // Determine zombie type and adjust spawn margin if necessary
-    if (randomValue < 0.1) {
+    // Determine zombie type, but disallow Deadly Danglers for the first few zombies using DANGER_THRESHOLD
+    if (randomValue < 0.15) {
         zombieType = Boomer;
-    } else if (randomValue < 0.2) {
+    } else if (randomValue < 0.2 && zombiesSpawned >= DANGER_THRESHOLD) {
         zombieType = DeadlyDangler;
-        spawnMargin *= 2; // Double the spawn margin for Deadly Dangler
+        spawnMargin *= 2;
     } else {
         zombieType = Zombie;
     }
 
-    // Calculate spawn position based on the edge and adjusted spawn margin
     switch (edge) {
         case 0:
             pos = vec2(rand(-halfCanvasWidth, halfCanvasWidth), halfCanvasHeight + spawnMargin);
@@ -259,16 +293,31 @@ function spawnZombie() {
             break;
     }
 
-    // Check if it's time to spawn a boss zombie based on currency
-    const currency = getCurrency();
-    if (currency >= 8 && currency % 8 === 0 && currency !== lastBossCurrencyThreshold) {
-        spawnBossZombie(pos);
-        lastBossCurrencyThreshold = currency; // Update the last currency threshold
-        return; // Exit the function to avoid spawning a regular zombie
+    // Adjust zombie speed based on number of zombies spawned
+    if (zombiesSpawned % 10 === 0 && gameSettings.zombieSpeed < gameSettings.maxZombieSpeed) {
+        // Increase speed every 10 zombies, but cap at maxZombieSpeed
+        gameSettings.zombieSpeed = Math.min(
+            gameSettings.zombieSpeed + gameSettings.speedIncrement,
+            gameSettings.maxZombieSpeed
+        );
     }
 
-    // Spawn the determined zombie type
-    gameSettings.zombies.push(new zombieType(pos));
+    // Adjust zombie speed based on player's currency
+    const currency = getCurrency();
+    if (currency % 50 === 0 && gameSettings.zombieSpeed < gameSettings.maxZombieSpeed) {
+        gameSettings.zombieSpeed = Math.min(
+            gameSettings.zombieSpeed + gameSettings.speedIncrement,
+            gameSettings.maxZombieSpeed
+        );
+    }
+
+    // Spawn the zombie and set its speed
+    const newZombie = new zombieType(pos);
+    newZombie.speed = gameSettings.zombieSpeed; // Apply updated speed to the new zombie
+    gameSettings.zombies.push(newZombie);
+
+    // Increment the zombie spawn count
+    zombiesSpawned++;
 }
 function gameUpdatePost() {
     // If needed for any post-update operations
@@ -328,7 +377,7 @@ function drawLeaderboard() {
     try {
         if (typeof window == 'undefined') {
             return;
-            
+
         }
         const leaderboardKey = 'Evacu13tion';
         // Safely parse the leaderboard from localStorage or use an empty array if null
@@ -338,7 +387,7 @@ function drawLeaderboard() {
 
         drawTextScreen(
             'Leaderboard:',
-            vec2(gameSettings.mapCanvas.width / 2 , yOffset - 250),
+            vec2(gameSettings.mapCanvas.width / 2, yOffset - 250),
             30, hsl(0, 0, 1), 10, hsl(0, 0, 0)
         );
 
@@ -347,7 +396,7 @@ function drawLeaderboard() {
             yOffset += 40; // Increase Y offset for each entry
             drawTextScreen(
                 `${index + 1}. ${entry.username} - ${entry.score}`,
-                vec2(gameSettings.mapCanvas.width / 2 , yOffset - 250),
+                vec2(gameSettings.mapCanvas.width / 2, yOffset - 250),
                 25, hsl(0, 0, 1), 10, hsl(0, 0, 0)
             );
         });
@@ -362,7 +411,7 @@ function resetGame() {
     setCurrency(0); // Reset currency
     gameSettings.zombies = [];
     gameSettings.bullets = [];
-    gameSettings.zombieSpeed = 0.02;
+    gameSettings.zombieSpeed = 0.025;
     gameSettings.spawnRate = 1400;
 
     player = new Player(vec2(0, 0)); // Reset player position and state

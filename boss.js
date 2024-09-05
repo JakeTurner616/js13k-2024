@@ -1,11 +1,12 @@
 import { Zombie, gameState } from './zombie.js'; // Importing the base Zombie class and game state
 import { vec2, drawRect, drawLine, hsl, PI } from './libs/littlejs.esm.min.js';
 import { player, gameSettings } from './main.js'; // Import gameSettings from main.js
-import { makeFire } from './effects.js'; // Import fire effect utility
+import { makeFire, makeBlood } from './effects.js'; // Import fire effect utility
 
 export class BossZombie extends Zombie {
     constructor(pos) {
         super(pos);
+        this.bloodEffectActive = false; // Flag to track blood effect per boss
         this.numLegs = 6;
         this.legLength = 1.5;
         this.legs = [];
@@ -13,6 +14,7 @@ export class BossZombie extends Zombie {
         this.bodySize = 1.2;
         this.speed = 0.009;
         this.maxHealth = 100;
+        this.finalBloodEmitted = false; // Flag to track the final blood emission
         this.health = this.maxHealth;
         this.healthBarWidth = 1.5;
         this.healthBarHeight = 0.3;
@@ -29,7 +31,18 @@ export class BossZombie extends Zombie {
     takeExplosionDamage() {
         this.takeHit(20); // Instead of dying, the BossZombie takes damage
     }
+    // Method to trigger the final blood emission when the boss dies
+    triggerFinalBlood() {
+        if (!this.finalBloodEmitted) {
+            this.finalBloodEmitted = true; // Ensure the final blood is emitted only once
+            const finalBloodEmitter = makeBlood(this.pos, 200); // Emit a larger amount of blood for dramatic effect
 
+            // Stop final blood animation after 3 seconds
+            setTimeout(() => {
+                finalBloodEmitter.emitRate = 0;
+            }, 3000);
+        }
+    }
     initializeLegs() {
         const angleToPlayer = Math.atan2(player.pos.y - this.pos.y, player.pos.x - this.pos.x);
         const totalSpreadAngle = PI; // Total spread angle for all legs around the body (180 degrees)
@@ -88,6 +101,7 @@ export class BossZombie extends Zombie {
     onDeath() {
         // Set the state to dead and trigger any death animations or effects
         this.isDead = true;
+        this.triggerFinalBlood(); // Trigger final blood emission on death
         this.isFadingOut = true;
         console.log("BossZombie is dead!");
 
@@ -123,7 +137,7 @@ export class BossZombie extends Zombie {
 
             // Take periodic damage while on fire
             if (!this.isDead) {
-                this.takeHit(0.09); 
+                this.takeHit(0.09);
             }
         } else {
             // Extinguish the fire when the duration is over
@@ -245,8 +259,8 @@ export class BossZombie extends Zombie {
         const healthPercent = this.health / this.maxHealth;
 
         drawRect(
-            healthBarPos, 
-            vec2(this.healthBarWidth, this.healthBarHeight), 
+            healthBarPos,
+            vec2(this.healthBarWidth, this.healthBarHeight),
             hsl(0, 1, 0.5) // Red color for lost health
         );
 
@@ -254,8 +268,8 @@ export class BossZombie extends Zombie {
         const greenPos = healthBarPos.add(vec2(greenWidth / 2 - this.healthBarWidth / 2, 0));
 
         drawRect(
-            greenPos, 
-            vec2(greenWidth, this.healthBarHeight), 
+            greenPos,
+            vec2(greenWidth, this.healthBarHeight),
             hsl(0.3, 1, 0.5) // Green color for current health
         );
     }

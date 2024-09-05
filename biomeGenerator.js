@@ -36,10 +36,10 @@ export function generateBiomeMap(canvas, { desertThreshold, shallowTerrianThresh
             else if (elevation < grassThreshold) {
                 const midGrassThreshold = (grassThreshold + mountainThreshold) / 2;
                 if (elevation < midGrassThreshold) [r, g, b] = interpolateColor([34, 139, 34], [50, 160, 50], (elevation - desertThreshold) / (midGrassThreshold - desertThreshold));
-                else [r, g, b] = interpolateColor([50, 160, 50], [85, 170, 85], (elevation - midGrassThreshold) / (mountainThreshold - midGrassThreshold));
+                else[r, g, b] = interpolateColor([50, 160, 50], [85, 170, 85], (elevation - midGrassThreshold) / (mountainThreshold - midGrassThreshold));
             } else if (elevation < mountainThreshold) [r, g, b] = interpolateColor([85, 170, 85], [139, 69, 19], (elevation - grassThreshold) / (mountainThreshold - grassThreshold));
             else if (elevation < snowThreshold) [r, g, b] = interpolateColor([139, 69, 19], [160, 160, 160], (elevation - mountainThreshold) / (snowThreshold - mountainThreshold));
-            else [r, g, b] = interpolateColor([160, 160, 160], [255, 255, 255], (elevation - snowThreshold) / (1 - snowThreshold));
+            else[r, g, b] = interpolateColor([160, 160, 160], [255, 255, 255], (elevation - snowThreshold) / (1 - snowThreshold));
             const index = (x + y * width) * 4;
             data[index] = r; data[index + 1] = g; data[index + 2] = b; data[index + 3] = 255;
         }

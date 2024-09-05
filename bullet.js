@@ -7,7 +7,7 @@ import { vec2, mainCanvas, drawRect, hsl, cameraScale } from './libs/littlejs.es
 
 let killCount = 0;
 let _scorecnt = 0; // Private variable for score
-
+let bloodEffectActive = false;
 // Getter for score
 export function getScore() {
     return _scorecnt;
@@ -80,7 +80,7 @@ export class Bullet {
                         sound_fire.play(this.pos);
                     } else {
                         zombie.takeHit(10); // Apply damage (e.g., 10 points of damage)
-                        
+
                         if (zombie.isDead) {
                             // If BossZombie's health reaches zero after the hit
                             killCount++;
@@ -94,13 +94,17 @@ export class Bullet {
                     // Play hit sound
                     sound_hit.play(this.pos);
 
-                    // Create blood effect
-                    const bloodEmitter = makeBlood(this.pos);
+                    // Create blood effect only if it's not already active for this specific boss
+                    if (!zombie.bloodEffectActive) {
+                        zombie.bloodEffectActive = true;
+                        const bloodEmitter = makeBlood(this.pos);
 
-                    // Stop blood animation after 3 seconds
-                    setTimeout(() => {
-                        bloodEmitter.emitRate = 0;
-                    }, 3000);
+                        // Stop blood animation after 3 seconds and reset flag for this boss
+                        setTimeout(() => {
+                            bloodEmitter.emitRate = 0;
+                            zombie.bloodEffectActive = false; // Allow new blood effects after the current one finishes
+                        }, 3000);
+                    }
 
                     // Remove bullet
                     gameSettings.bullets.splice(gameSettings.bullets.indexOf(this), 1);
@@ -112,7 +116,7 @@ export class Bullet {
                     zombie.catchFire(); // Set zombie on fire and play fire effect
                     sound_fire.play(this.pos);
                 } else {
-                    zombie.isDead = true; 
+                    zombie.isDead = true;
                     killCount++;
                     incrementScore(); // Increment the score using the function
                     addCurrency(1); // Increase currency using the setter
@@ -123,7 +127,7 @@ export class Bullet {
                 // Play hit sound
                 sound_hit.play(this.pos);
 
-                // Create blood effect
+                // Create blood effect for normal zombies without any special conditions
                 const bloodEmitter = makeBlood(this.pos);
 
                 // Stop blood animation after 3 seconds
@@ -148,7 +152,7 @@ export class Bullet {
         const halfCanvasHeight = (mainCanvas.height / 2) / cameraScale;
 
         return this.pos.x >= -halfCanvasWidth && this.pos.x <= halfCanvasWidth &&
-               this.pos.y >= -halfCanvasHeight && this.pos.y <= halfCanvasHeight;
+            this.pos.y >= -halfCanvasHeight && this.pos.y <= halfCanvasHeight;
     }
 
     render() {
