@@ -1,17 +1,17 @@
+import { keyIsDown, mouseIsDown, mousePos, vec2, drawRect, drawLine, hsl, cameraScale } from './libs/littlejs.esm.min.js';
 import { gameSettings } from './main.js';
 import { Bullet } from './bullet.js';
 import { sound_shoot, sound_reload, sound_swing } from './sound.js';
 import { setGameOver, Boomer, gameState } from './zombie.js';
 import { isInShop } from './shop.js';
-import { keyIsDown, mouseIsDown, mousePos, vec2, drawRect, drawLine, hsl, cameraScale } from './libs/littlejs.esm.min.js';
 import { makeWalkingDust, makeMuzzleSmoke } from './effects.js';
 import { Melee } from './melee.js'; // Import Melee class for melee handling
 
 export class Player {
     constructor(pos) {
         this.pos = pos;
-        this.weapon = 'Baseball Bat'; // Default weapon set to Baseball Bat
-        this.items = ['Baseball Bat']; // Initialize with default item
+        this.weapon = 'Bat'; // Default weapon set to Baseball Bat
+        this.items = ['Bat']; // Initialize with default item
         this.usingBat = true; // Track whether the player is using the bat
         this.fireAbility = false;
 
@@ -78,7 +78,7 @@ export class Player {
         this.isMoving = moved;
 
         // Handle melee attack
-        if (mouseIsDown(0) && this.weapon === 'Baseball Bat' && !this.isSwinging) {
+        if (mouseIsDown(0) && this.weapon === 'Bat' && !this.isSwinging) {
             this.meleeAttack();
             setTimeout(() => { sound_swing.play(this.pos); }, 700);
         }
@@ -314,7 +314,7 @@ export class Player {
         } else if (this.weapon === 'Machine Gun') {
             weaponLength = 1.0;
             weaponColor = hsl(0, 0, 0); // Black color for Machine Gun
-        } else if (this.weapon === 'Baseball Bat') {
+        } else if (this.weapon === 'Bat') {
             this.renderBaseballBat(angle, angleDifference);
             return; // Return early since baseball bat rendering is separate
         }

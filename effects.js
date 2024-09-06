@@ -1,5 +1,5 @@
-//effects.js
 import { ParticleEmitter, Color, PI } from './libs/littlejs.esm.min.js';
+
 export function makeBlood(pos, amount = 100) {
     const emitter = new ParticleEmitter(
         pos, 0, 0.5, 0.5, amount, PI,

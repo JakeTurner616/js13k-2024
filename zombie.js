@@ -1,8 +1,8 @@
+import { vec2, drawRect, hsl, drawLine, PI } from './libs/littlejs.esm.min.js';
 import { makeBlood, makeFire, makeExplosion } from './effects.js';
 import { sound_explode, sound_bat_hit } from './sound.js';
 import { player } from './main.js';
 import { EXPLOSION_RADIUS, gameSettings } from './main.js';
-import { vec2, drawRect, hsl, drawLine, PI } from './libs/littlejs.esm.min.js';
 import { incrementScore, addCurrency } from './bullet.js';
 import { showComboMessage } from './main.js';
 
@@ -61,7 +61,6 @@ function finalizeComboChain(chain) {
         incrementScore(multiplier);
         showComboMessage(comboCount, comboPosition);
 
-        console.log(`Combo chain ended with ${comboCount} zombies. Multiplier: x${multiplier}`);
     }
 }
 
@@ -309,7 +308,6 @@ export class Zombie {
 
     kill() {
         if (!this.isDead) {
-            console.log('Zombie killed via bat!');
             sound_bat_hit.play(this.pos); // Play hit sound
             incrementScore(); // Increment the score using the function
             addCurrency(1); // Increase currency using the setter
@@ -353,7 +351,6 @@ export class Boomer extends Zombie {
     // Override the catchFire method to start flickering before the explosion
     catchFire() {
         if (!this.onFire && !this.isDead) {
-            console.log('Boomer caught fire and will flicker before exploding!');
             this.onFire = true;
             this.speed = 0; // Stop Boomer movement when it catches fire
             this.fireEmitter = makeFire(this.pos); // Start the fire emitter
@@ -393,7 +390,6 @@ export class Boomer extends Zombie {
 
     boomerHitByBat() {
         if (!this.isFlickering && !this.isDead) {
-            console.log('Boomer hit by bat!');
             this.isFlickering = true;
             this.flickerTimer = 0; // Reset flicker timer
             sound_bat_hit.play(this.pos); // Play punch sound when hit
@@ -413,7 +409,6 @@ export class Boomer extends Zombie {
     }
 
     explode() {
-        console.log('Boomer exploded!');
         // Stop the fire emitter if it's still running
         if (this.fireEmitter) {
             this.fireEmitter.emitRate = 0; // Stop fire effect
@@ -451,7 +446,6 @@ export class Boomer extends Zombie {
 
         // Handle combo scoring and messages
         if (comboCount >= comboThreshold) {
-            console.log(`Combo x${comboCount}`);
             incrementScore(1 * comboCount);
             const comboPosition = new vec2(this.pos.x, this.pos.y);
             showComboMessage(comboCount, comboPosition);
@@ -613,7 +607,6 @@ export class DeadlyDangler extends Zombie {
             this.onFire = true;
             this.fireEmitter = makeFire(this.pos); // Start the fire effect immediately
             this.fireSpreadTimer = 2; // Fire spread timer set for 2 seconds
-            console.log("Zombie caught fire!");
 
             // Increment score and currency when the zombie catches fire
             incrementScore(1);
@@ -709,7 +702,7 @@ export class DeadlyDangler extends Zombie {
         return false; // No collision detected
     }
 
-    checkTendrilSegmentCollision(side, index, playerPos) {
+    checkTendrilSegmentCollision(side, index, playerPos) { // Check for collision within a single tendril or segment 
         // Adjust base position to start from left or right edge of the body
         const baseOffsetX = (1 / 2 + this.legThickness / 2) * side; // Move to left or right edge
         const baseOffsetY = (index - (this.numLegsPerSide - 1) / 2) * (1 / this.numLegsPerSide);
@@ -814,7 +807,7 @@ export class DeadlyDangler extends Zombie {
         }
     }
 
-    drawTendril(side, index, opacity) {
+    drawTendril(side, index, opacity) { // Draw the tendril segment - the most complex part of the render method here:
         // Adjust base position to start from left or right edge of the body
         const baseOffsetX = (1 / 2 + this.legThickness / 2) * side; // Move to left or right edge
         const baseOffsetY = (index - (this.numLegsPerSide - 1) / 2) * (1 / this.numLegsPerSide);

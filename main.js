@@ -241,7 +241,7 @@ function gameRenderPost() {
 export function showComboMessage(comboCount, position) {
     const positionVec = position instanceof vec2 ? position : new vec2(Math.floor(position.x), Math.floor(position.y));
 
-    console.log('Drawing combo message from main.js: ' + comboCount + ' at ', positionVec);
+    //console.log('Drawing combo message from main.js: ' + comboCount + ' at ', positionVec);
 
     comboMessage.text = `X${comboCount}!`;
     comboMessage.position = positionVec;
@@ -261,8 +261,6 @@ function spawnBossZombie(position) {
 
     //console.log('BossZombie spawned at position:', position);
 }
-
-
 
 function spawnZombie() {
     if (!isWindowFocused || isInShop() || gameState.gameOver) return;
@@ -382,6 +380,8 @@ function saveScore(username, score) {
 }
 
 // Function to draw the leaderboard
+// If the leaderboard cannot load entries, it is likley because it is pulling from an invalid namespace json object due to minification step.
+// I'll update this comment if I'm incorrect.
 function drawLeaderboard() {
     try {
         if (typeof window == 'undefined') {
@@ -404,7 +404,7 @@ function drawLeaderboard() {
         leaderboard.slice(0, 3).forEach((entry, index) => {
             yOffset += 40; // Increase Y offset for each entry
             drawTextScreen(
-                `${index + 1}. ${entry.username} - ${entry.score}`,
+                `${index + 1}. ${entry.username} - ${entry['score']}`,
                 vec2(gameSettings.mapCanvas.width / 2, yOffset - 250),
                 25, hsl(0, 0, 1), 10, hsl(0, 0, 0)
             );

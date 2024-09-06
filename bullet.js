@@ -1,9 +1,9 @@
+import { vec2, mainCanvas, drawRect, hsl, cameraScale } from './libs/littlejs.esm.min.js';
 import { gameSettings, startSpawningZombies, stopSpawningZombies } from './main.js';
 import { sound_hit, sound_fire } from './sound.js';
 import { makeBlood } from './effects.js';
 import { setGameOver } from './zombie.js';
 import { BossZombie } from './boss.js';
-import { vec2, mainCanvas, drawRect, hsl, cameraScale } from './libs/littlejs.esm.min.js';
 
 let killCount = 0;
 let _scorecnt = 0; // Private variable for score

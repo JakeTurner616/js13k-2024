@@ -70,3 +70,6 @@ var mapCanvas;
 //window.localStorage var
 /** @type {Storage} */
 var localStorage;
+
+var username;
+var score;

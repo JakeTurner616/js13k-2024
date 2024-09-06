@@ -1,5 +1,5 @@
-import { Zombie, gameState } from './zombie.js'; // Importing the base Zombie class and game state
 import { vec2, drawRect, drawLine, hsl, PI } from './libs/littlejs.esm.min.js';
+import { Zombie, gameState } from './zombie.js'; // Importing the base Zombie class and game state
 import { player, gameSettings } from './main.js'; // Import gameSettings from main.js
 import { makeFire, makeBlood } from './effects.js'; // Import fire effect utility
 
@@ -92,10 +92,7 @@ export class BossZombie extends Zombie {
         // Check if health falls to zero and handle death logic
         if (this.health === 0 && !this.isDead) {
             this.onDeath(); // Trigger death logic
-        } else {
-            // Logic for when the boss takes damage but is not dead yet
-            console.log(`BossZombie took ${damage} damage, current health: ${this.health}`);
-        }
+        } 
     }
 
     onDeath() {
@@ -103,7 +100,6 @@ export class BossZombie extends Zombie {
         this.isDead = true;
         this.triggerFinalBlood(); // Trigger final blood emission on death
         this.isFadingOut = true;
-        console.log("BossZombie is dead!");
 
         // Freeze legs positions
         this.legs.forEach(leg => {
@@ -121,7 +117,6 @@ export class BossZombie extends Zombie {
             this.fireEmitter = makeFire(this.pos); // Start the fire effect immediately
             this.fireSpreadTimer = 2; // Fire spread timer set for 2 seconds
             this.fireDuration = 5; // Reset fire duration timer
-            console.log("BossZombie caught fire!");
         }
     }
 
@@ -151,7 +146,6 @@ export class BossZombie extends Zombie {
             if (this.fireEmitter) {
                 this.fireEmitter.emitRate = 0; // Stop the fire effect
             }
-            console.log("BossZombie extinguished!");
         }
     }
 

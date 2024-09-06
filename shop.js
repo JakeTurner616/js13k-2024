@@ -1,6 +1,6 @@
+import { mouseWasPressed, keyWasPressed, mousePosScreen, drawRect, drawTextScreen, hsl, vec2, mainCanvas } from './libs/littlejs.esm.min.js';
 import { player, stopSpawningZombies, startSpawningZombies } from './main.js';
 import { getCurrency, setCurrency } from './bullet.js';
-import { mouseWasPressed, keyWasPressed, mousePosScreen, drawRect, drawTextScreen, hsl, vec2, mainCanvas } from './libs/littlejs.esm.min.js';
 
 let inShop = false;
 let selectedItem = 0;
