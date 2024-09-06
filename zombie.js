@@ -327,7 +327,7 @@ export class Boomer extends Zombie {
         this.exploding = false;
         this.bloodEmitter = null;
         this.explosionEmitter = null;
-        this.isFlickering = false; // New property to track flickering state
+        this.isFlickering = false; // Property to track flickering state
         this.flickerTimer = 0; // Timer to manage flickering duration
         this.flickerDuration = 2; // Total duration of the flickering effect
 
@@ -348,6 +348,20 @@ export class Boomer extends Zombie {
         // Frozen arm positions upon death
         this.frozenLeftArm = null;
         this.frozenRightArm = null;
+    }
+
+    // Override the catchFire method to start flickering before the explosion
+    catchFire() {
+        if (!this.onFire && !this.isDead) {
+            console.log('Boomer caught fire and will flicker before exploding!');
+            this.onFire = true;
+            this.speed = 0; // Stop Boomer movement when it catches fire
+            this.fireEmitter = makeFire(this.pos); // Start the fire emitter
+
+            // Start flickering and set a delay before explosion
+            this.isFlickering = true;
+            this.flickerTimer = 0;
+        }
     }
 
     update() {
@@ -397,9 +411,15 @@ export class Boomer extends Zombie {
             this.explode(); // Trigger explosion after flickering ends
         }
     }
-    explode() {
 
-        console.log('Boomer exploded called!');
+    explode() {
+        console.log('Boomer exploded!');
+        // Stop the fire emitter if it's still running
+        if (this.fireEmitter) {
+            this.fireEmitter.emitRate = 0; // Stop fire effect
+            this.fireEmitter = null; // Clean up reference
+        }
+
         // Adds currency and effects
         addCurrency(1);
         this.bloodEmitter = makeBlood(this.pos, 10);
@@ -459,7 +479,6 @@ export class Boomer extends Zombie {
         if (this.isDead) {
             if (this.exploding) {
                 this.bombFlickerEffect(); // Flicker effect during explosion
-
                 return;
             }
         } else if (this.isFlickering) {
@@ -489,11 +508,13 @@ export class Boomer extends Zombie {
             this.drawArm(-1, color); // Left arm
         }
     }
+
     freezeArms() {
         // Freeze the current positions of the arms when Boomer is hit or explodes
         this.frozenLeftArm = this.getCurrentArmPosition(-1);
         this.frozenRightArm = this.getCurrentArmPosition(1);
     }
+
     getCurrentArmPosition(side) {
         // Calculate direction to player
         const directionToPlayer = player.pos.subtract(this.pos).normalize();
@@ -507,9 +528,9 @@ export class Boomer extends Zombie {
         const upperArmLength = this.armLength * 0.5;
         const forearmLength = this.armLength * 0.5;
 
-        // Oscillate arm angles to create a zombie-like staggered effect
+        // Oscillate arm angles to create a boomer-like staggered effect
         const upperArmAngle = angleToPlayer + Math.sin(this.time + this.armDelay) * (this.maxArmAngle - this.minArmAngle);
-        const forearmAngle = upperArmAngle + Math.sin(this.time + this.armDelay + Math.PI / 4) * (this.maxArmAngle - this.minArmAngle);
+        const forearmAngle = upperArmAngle + Math.sin(this.time + this.armDelay + PI / 4) * (this.maxArmAngle - this.minArmAngle);
 
         // Calculate end position of the upper arm
         const upperArmEnd = basePos.add(vec2(Math.cos(upperArmAngle), Math.sin(upperArmAngle)).scale(upperArmLength));
@@ -520,6 +541,7 @@ export class Boomer extends Zombie {
         // Return the calculated positions
         return { upperStart: basePos, upperEnd: upperArmEnd, foreEnd: forearmEnd };
     }
+
     drawFrozenArm(arm, color) {
         if (arm) {
             drawLine(arm.upperStart, arm.upperEnd, this.armThickness, color); // Use the color for the frozen arm
@@ -569,8 +591,6 @@ export class Boomer extends Zombie {
             this.drawFrozenArm(this.frozenRightArm, flickerColor);
         }
     }
-
-
 }
 export class DeadlyDangler extends Zombie {
     constructor(pos) {
