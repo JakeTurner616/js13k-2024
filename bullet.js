@@ -7,7 +7,7 @@ import { vec2, mainCanvas, drawRect, hsl, cameraScale } from './libs/littlejs.es
 
 let killCount = 0;
 let _scorecnt = 0; // Private variable for score
-let bloodEffectActive = false;
+
 // Getter for score
 export function getScore() {
     return _scorecnt;

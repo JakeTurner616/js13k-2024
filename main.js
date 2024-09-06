@@ -1,4 +1,3 @@
-import './libs/littlejs.esm.min.js';
 import { generateBiomeMap } from './biomeGenerator.js';
 import { Player } from './player.js';
 import { Zombie, Boomer, gameState, DeadlyDangler } from './zombie.js';
@@ -126,21 +125,29 @@ function gameUpdate() {
 
 function gameRender() {
     const context = gameSettings.mapCanvas.getContext('2d');
+
+    // Draw the biome map background
     context.drawImage(canvasState.biomeCanvas, 0, 0, gameSettings.mapCanvas.width, gameSettings.mapCanvas.height);
 
     context.save();
     context.scale(1 / cameraScale, 1 / cameraScale);
 
+    // Render zombies and bullets
     gameSettings.zombies.forEach(zombie => zombie.render());
     gameSettings.bullets.forEach(bullet => bullet.render());
 
+    // Render the player
     player.render();
     context.restore();
 
+
+
+    // Render the shop if in the shop mode
     if (isInShop()) {
         drawShop();
     }
 
+    // Render game over text
     if (gameState.gameOver) {
         drawTextScreen(
             'Game Over',
@@ -236,7 +243,7 @@ export function showComboMessage(comboCount, position) {
 
     console.log('Drawing combo message from main.js: ' + comboCount + ' at ', positionVec);
 
-    comboMessage.text = `Combo x${comboCount}!`;
+    comboMessage.text = `X${comboCount}!`;
     comboMessage.position = positionVec;
     comboMessage.displayTime = comboMessage.fadeTime; // Reset display time
     comboMessage.active = true; // Set combo message active

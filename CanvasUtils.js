@@ -1,7 +1,5 @@
-//CanvasUtils.js
 import { gameSettings } from './main.js'; 
-import { } from './libs/littlejs.esm.min.js';
-// Wrap biomeCanvas in an object
+
 export const canvasState = {
     biomeCanvas: null
 };

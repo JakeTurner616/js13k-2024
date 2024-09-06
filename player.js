@@ -4,7 +4,7 @@ import { sound_shoot, sound_reload, sound_swing } from './sound.js';
 import { setGameOver, Boomer, gameState } from './zombie.js';
 import { isInShop } from './shop.js';
 import { keyIsDown, mouseIsDown, mousePos, vec2, drawRect, drawLine, hsl, cameraScale } from './libs/littlejs.esm.min.js';
-import { makeWalkingDust, makeMuzzleSmoke, makeMuzzleFlash } from './effects.js';
+import { makeWalkingDust, makeMuzzleSmoke } from './effects.js';
 import { Melee } from './melee.js'; // Import Melee class for melee handling
 
 export class Player {
@@ -235,7 +235,6 @@ export class Player {
 
                 // Create muzzle smoke and flash effects at the muzzle position
                 makeMuzzleSmoke(muzzlePos, 8, this.lastAngle);
-                makeMuzzleFlash(muzzlePos, 3, this.lastAngle);
             }
 
             // Fire the bullets based on the weapon

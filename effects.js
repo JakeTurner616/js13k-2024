@@ -52,27 +52,6 @@ export function makeMuzzleSmoke(pos, amount = 10, direction) {
 
     return emitter;
 }
-export function makeMuzzleFlash(pos, amount, direction) {
-    const forwardSpreadAngle = Math.PI / 36; // Small spread angle for forward cone effect
-
-    const randomAngle = direction + (Math.random() - 0.4) * forwardSpreadAngle; // Narrow the angle for forward direction
-    const emitter = new ParticleEmitter(
-        pos, 1, 0.5, 0.6, amount, randomAngle, // Use the adjusted random angle to maintain forward shooting
-        undefined,
-        new Color(1, 1, 0.5), new Color(1, 0.8, 0), // Bright yellow to orange color
-        new Color(1, 0.5, 0, 0), new Color(1, 0.5, 0, 0), // Fade to transparent
-        0.3, 0.1, 0.2, 0.1, 0.5, // Small particles that fade quickly
-        0.9, 0.3, 0.5, randomAngle, 0.2, // Spread effect with minimal angle variation
-        1.2, true, false, true, 0, false // Trail effect
-    );
-
-    emitter.elasticity = 2;
-    emitter.trailScale = 0.5;
-    emitter.fadeRate = 1; // Fast fading for quick muzzle flash
-
-    return emitter;
-
-}
 export function makeExplosion(pos, amount = 10) {
     const emitter = new ParticleEmitter(
         pos, 0, 0.5, 0, amount, 2 * PI,
