@@ -12,6 +12,7 @@ export class Player {
         this.pos = pos;
         this.weapon = 'Baseball Bat'; // Default weapon set to Baseball Bat
         this.items = ['Baseball Bat']; // Initialize with default item
+        this.usingBat = true; // Track whether the player is using the bat
         this.fireAbility = false;
 
         this.isAutomatic = false; // No automatic fire for melee weapon
@@ -527,17 +528,20 @@ export class Player {
         if (itemName === 'Pistol') {
             this.weapon = itemName; // Switch to Pistol
             this.magazineSize = 7; // Default Pistol magazine size
-            this.currentAmmo = this.magazineSize; // Reset current ammo to magazine size
+            this.currentAmmo = this.magazineSize; // Reset current ammo to magazine 
+            this.usingBat = false; // No longer using the bat
         }
         else if (itemName === 'Shotgun') {
             this.weapon = itemName; // Switch to Shotgun
             this.magazineSize = 6; // Example Shotgun magazine size
             this.currentAmmo = this.magazineSize; // Reset current ammo to magazine size
+            this.usingBat = false; // No longer using the bat
         }
         else if (itemName === 'Machine Gun') {
             this.weapon = itemName; // Switch to Machine Gun
             this.magazineSize = 13; // Set ammo size to 13 for Machine Gun
             this.currentAmmo = this.magazineSize; // Reset current ammo to full magazine
+            this.usingBat = false; // No longer using the bat
         }
     }
 

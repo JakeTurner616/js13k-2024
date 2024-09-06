@@ -1,10 +1,3 @@
-import { gameSettings } from './main.js';
-import { sound_hit, sound_fire } from './sound.js';
-import { makeBlood } from './effects.js';
-import { incrementScore, addCurrency } from './bullet.js';
-import { BossZombie } from './boss.js';
-import { Boomer } from './zombie.js'; // Import Boomer class
-
 export class Melee {
     constructor(player) {
         this.player = player;

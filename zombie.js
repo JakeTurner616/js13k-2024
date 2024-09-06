@@ -320,13 +320,6 @@ export class Zombie {
         }
     }
 }
-
-
-
-
-
-
-
 export class Boomer extends Zombie {
     constructor(pos) {
         super(pos);

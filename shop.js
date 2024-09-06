@@ -12,9 +12,9 @@ export function isInShop() {
 // Updated items list with the Pistol
 export const items = [
     { name: 'Pistol', cost: 10, purchased: false },
-    { name: 'Machine Gun', cost: 30, purchased: false },
-    { name: 'Shotgun', cost: 50, purchased: false },
-    { name: 'Fire Ability', cost: 75, purchased: false },
+    { name: 'Machine Gun', cost: 45, purchased: false },
+    { name: 'Shotgun', cost: 75, purchased: false },
+    { name: 'Fire Ability', cost: 100, purchased: false },
 ];
 
 

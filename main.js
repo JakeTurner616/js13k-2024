@@ -43,7 +43,9 @@ window.addEventListener('blur', () => {
 
 export const gameSettings = {
     zombieSpeed: 0.025, // Starting speed
-    spawnRate: 1400, // Initial spawn rate
+    spawnRate: 1400, // Initial spawn rate in milliseconds
+    minSpawnRate: 500, // Minimum spawn rate cap
+    spawnRateDecrement: 50, // Decrease spawn rate by 50ms every interval
     speedIncrement: 0.001, // Speed increase per zombie spawn or score threshold
     maxZombieSpeed: 0.1, // Maximum zombie speed cap
     zombies: [],
@@ -53,7 +55,6 @@ export const gameSettings = {
     mapCanvasWidth: mapCanvas.width,
     mapCanvasHeight: mapCanvas.height
 };
-
 
 export let player;
 export let spawnInterval;
@@ -89,6 +90,7 @@ export function startSpawningZombies() {
 export function stopSpawningZombies() {
     clearInterval(spawnInterval);
 }
+
 
 function gameUpdate() {
     if (gameState.gameOver) {
@@ -172,7 +174,7 @@ function gameRender() {
 
 
 let beepedCurrencyLevels = []; // Array to track currency levels that triggered the beep
-const beepThresholds = [10, 30, 50, 75];
+const beepThresholds = [10, 45, 75, 100];
 
 function gameRenderPost() {
     if (!gameState.gameOver) {
@@ -256,8 +258,7 @@ function spawnBossZombie(position) {
 
 
 function spawnZombie() {
-    if (!isWindowFocused) return;
-    if (isInShop() || gameState.gameOver) return;
+    if (!isWindowFocused || isInShop() || gameState.gameOver) return;
 
     const halfCanvasWidth = (gameSettings.mapCanvas.width / 2) / cameraScale;
     const halfCanvasHeight = (gameSettings.mapCanvas.height / 2) / cameraScale;
@@ -268,16 +269,7 @@ function spawnZombie() {
     const randomValue = Math.random();
     let zombieType;
 
-    // Determine zombie type, but disallow Deadly Danglers for the first few zombies using DANGER_THRESHOLD
-    if (randomValue < 0.15) {
-        zombieType = Boomer;
-    } else if (randomValue < 0.2 && zombiesSpawned >= DANGER_THRESHOLD) {
-        zombieType = DeadlyDangler;
-        spawnMargin *= 2;
-    } else {
-        zombieType = Zombie;
-    }
-
+    // Set the spawn position based on the edge
     switch (edge) {
         case 0:
             pos = vec2(rand(-halfCanvasWidth, halfCanvasWidth), halfCanvasHeight + spawnMargin);
@@ -293,22 +285,32 @@ function spawnZombie() {
             break;
     }
 
-    // Adjust zombie speed based on number of zombies spawned
-    if (zombiesSpawned % 10 === 0 && gameSettings.zombieSpeed < gameSettings.maxZombieSpeed) {
-        // Increase speed every 10 zombies, but cap at maxZombieSpeed
-        gameSettings.zombieSpeed = Math.min(
-            gameSettings.zombieSpeed + gameSettings.speedIncrement,
-            gameSettings.maxZombieSpeed
-        );
+    // If the player is no longer using the bat, introduce a 20% chance to spawn a boss zombie
+    if (!player.usingBat && Math.random() < 0.2) {
+        spawnBossZombie(pos);
+        return; // Exit function after spawning boss to avoid spawning regular zombies
     }
 
-    // Adjust zombie speed based on player's currency
-    const currency = getCurrency();
-    if (currency % 50 === 0 && gameSettings.zombieSpeed < gameSettings.maxZombieSpeed) {
-        gameSettings.zombieSpeed = Math.min(
-            gameSettings.zombieSpeed + gameSettings.speedIncrement,
-            gameSettings.maxZombieSpeed
-        );
+    // Continue normal zombie spawning logic
+    if (randomValue < 0.15) {
+        zombieType = Boomer;
+    } else if (randomValue < 0.2 && zombiesSpawned >= DANGER_THRESHOLD) {
+        zombieType = DeadlyDangler;
+        spawnMargin *= 2;
+    } else {
+        zombieType = Zombie;
+    }
+
+    // Adjust zombie speed and spawn rate dynamically
+    if (zombiesSpawned % 10 === 0 && gameSettings.zombieSpeed < gameSettings.maxZombieSpeed) {
+        gameSettings.zombieSpeed = Math.min(gameSettings.zombieSpeed + gameSettings.speedIncrement, gameSettings.maxZombieSpeed);
+    }
+
+    if (zombiesSpawned % 10 === 0 && gameSettings.spawnRate > gameSettings.minSpawnRate) {
+        // Decrease spawn rate every 10 zombies, but cap at the minimum spawn rate
+        gameSettings.spawnRate = Math.max(gameSettings.spawnRate - gameSettings.spawnRateDecrement, gameSettings.minSpawnRate);
+        stopSpawningZombies(); // Stop the current interval
+        startSpawningZombies(); // Restart with the new spawn rate
     }
 
     // Spawn the zombie and set its speed

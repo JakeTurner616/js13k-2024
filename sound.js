@@ -8,4 +8,4 @@ export const sound_reload = new Sound([2,,261.6256,,,0,4,1.2,-0.1,.1,,,,.2,,,,0,
 export const sound_swing = new Sound([,,150,.05,,.05,,1.3,,,,,,3]);
 export const sound_bat_hit = new Sound([.3,,218,,.02,.2,4,1.15,-4.5,,,,,.7,,.1]);
 export const sound_lvl_up = new Sound([,,668,.01,.24,.25,,2.8,,5,309,.09,.08,,,.1,,.5,.13,.33,374]);
-export const sound_combo = new Sound([.3,,215,.02,.14,.23,1,2.8,,,,,.08,,5.6,.2,,.91,.14,.25,893]);
+export const sound_combo = new Sound([.6,,215,.02,.14,.23,1,2.8,,,,,.08,,5.6,.2,,.91,.14,.25,893]);
