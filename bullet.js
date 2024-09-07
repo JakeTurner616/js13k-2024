@@ -6,17 +6,16 @@ import { setGameOver } from './zombie.js';
 import { BossZombie } from './boss.js';
 
 let killCount = 0;
-let _scorecnt = 0; // Private variable for score
+let scorecnt = 0; // Private variable for score
 
 // Getter for score
 export function getScore() {
-    return _scorecnt;
+    return scorecnt;
 }
 
 // Setter for score
 export function setScore(value) {
-    _scorecnt = value;
-    // Additional logic can be added here, such as updating the UI
+    scorecnt = value;
 }
 
 // Function to increment score

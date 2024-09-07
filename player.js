@@ -1,4 +1,4 @@
-import { keyIsDown, mouseIsDown, mousePos, vec2, drawRect, drawLine, hsl, cameraScale } from './libs/littlejs.esm.min.js';
+import { keyIsDown, mouseIsDown, mousePos, vec2, drawRect, drawLine, hsl, cameraScale, gamepadStick, isTouchDevice } from './libs/littlejs.esm.min.js';
 import { gameSettings } from './main.js';
 import { Bullet } from './bullet.js';
 import { sound_shoot, sound_reload, sound_swing } from './sound.js';
@@ -58,22 +58,31 @@ export class Player {
         const moveSpeed = 0.1;
         let moved = false;
 
-        if (keyIsDown('ArrowLeft')) {
-            this.pos.x -= moveSpeed;
-            moved = true;
-        }
-        if (keyIsDown('ArrowRight')) {
-            this.pos.x += moveSpeed;
-            moved = true;
-        }
-        if (keyIsDown('ArrowUp')) {
-            this.pos.y += moveSpeed;
-            moved = true;
-        }
-        if (keyIsDown('ArrowDown')) {
-            this.pos.y -= moveSpeed;
-            moved = true;
-        }
+    // Keyboard controls
+    if (keyIsDown('ArrowLeft')) {
+        this.pos.x -= moveSpeed;
+        moved = true;
+    }
+    if (keyIsDown('ArrowRight')) {
+        this.pos.x += moveSpeed;
+        moved = true;
+    }
+    if (keyIsDown('ArrowUp')) {
+        this.pos.y += moveSpeed;
+        moved = true;
+    }
+    if (keyIsDown('ArrowDown')) {
+        this.pos.y -= moveSpeed;
+        moved = true;
+    }
+    // Gamepad controls using LittleJS input system
+    const leftStick = gamepadStick(0); // Left stick (stick 0)
+    if (leftStick.length()) { // Check if the stick is being moved
+        this.pos.x += leftStick.x * moveSpeed;
+        this.pos.y += leftStick.y * moveSpeed;
+        moved = true;
+    }
+
 
         this.isMoving = moved;
 
@@ -151,7 +160,6 @@ export class Player {
         this.pos.y = Math.max(-halfVisibleHeight, Math.min(this.pos.y, halfVisibleHeight));
 
         // Collision detection with zombies
-        if (!this.isSwinging) {
             gameSettings.zombies.forEach(zombie => {
                 if (!zombie.isDead && this.pos.distance(zombie.pos) < 1) {
                     if (!zombie.onFire || (zombie.onFire && zombie.fireSpreadTimer > 0)) {
@@ -160,7 +168,7 @@ export class Player {
                     }
                 }
             });
-        }
+
 
         const moveDirection = vec2(0, 0); // Initialize the move direction
         if (this.isMoving) {
@@ -281,7 +289,7 @@ export class Player {
         // Calculate angle between player and mouse for direction
         let angle;
         let angleDifference = 0; // Initialize angleDifference
-        if (!gameState.gameOver) {
+        if (!gameState.gameOver && !isInShop(true)) {
             // If the game is not over, calculate the angle towards the mouse cursor
             const dx = mousePos.x - this.pos.x;
             const dy = mousePos.y - this.pos.y;
@@ -297,6 +305,7 @@ export class Player {
             // If the game is over, keep the arms in their last position
             angle = this.lastAngle; // Use the stored angle
         }
+
 
         // Arm length and positions
         const armTipLength = 1.5; // Normal distance from player to gun tip
@@ -526,7 +535,7 @@ export class Player {
 
         if (itemName === 'Pistol') {
             this.weapon = itemName; // Switch to Pistol
-            this.magazineSize = 7; // Default Pistol magazine size
+            this.magazineSize = 8; // Default Pistol magazine size
             this.currentAmmo = this.magazineSize; // Reset current ammo to magazine 
             this.usingBat = false; // No longer using the bat
         }

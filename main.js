@@ -1,10 +1,10 @@
+import { vec2, engineInit, cameraScale, rand, hsl, mouseWasPressed, drawTextScreen, mousePos, drawText, setPaused, keyWasPressed, setTouchGamepadEnable, setTouchGamepadSize} from './libs/littlejs.esm.min.js';
 import { generateBiomeMap } from './biomeGenerator.js';
 import { Player } from './player.js';
 import { Zombie, Boomer, gameState, DeadlyDangler } from './zombie.js';
 import { setupBiomeCanvas, adjustCanvasSize, canvasState } from './CanvasUtils.js';
 import { handleShopMouseClick, handleShopInput, drawShop, isInShop, items } from './shop.js';
 import { getCurrency, getScore, setScore, setCurrency } from './bullet.js';
-import { vec2, engineInit, cameraScale, rand, hsl, mouseWasPressed, drawTextScreen, mousePos, drawText, setPaused, keyWasPressed } from './libs/littlejs.esm.min.js';
 import { sound_lvl_up, sound_combo } from './sound.js';
 import { BossZombie } from './boss.js'; // Ensure to import the BossZombie class
 let zombiesSpawned = 0; // Track how many zombies have been spawned
@@ -60,6 +60,8 @@ export let spawnInterval;
 export let EXPLOSION_RADIUS = 4.3; // Explosion kill radius
 
 function gameInit() {
+    setTouchGamepadSize(120)
+    setTouchGamepadEnable(true); // Enable touch gamepad for mobile devices
     // Setup biome canvas and generate texture
     setupBiomeCanvas();
 
@@ -124,13 +126,13 @@ function gameUpdate() {
 }
 
 function gameRender() {
+    
     const context = gameSettings.mapCanvas.getContext('2d');
 
     // Draw the biome map background
     context.drawImage(canvasState.biomeCanvas, 0, 0, gameSettings.mapCanvas.width, gameSettings.mapCanvas.height);
 
     context.save();
-    context.scale(1 / cameraScale, 1 / cameraScale);
 
     // Render zombies and bullets
     gameSettings.zombies.forEach(zombie => zombie.render());
@@ -290,8 +292,8 @@ function spawnZombie() {
             break;
     }
 
-    // If the player is no longer using the bat, introduce a 20% chance to spawn a boss zombie
-    if (!player.usingBat && Math.random() < 0.2) {
+    // If the player is no longer using the bat, introduce a 9% chance to spawn a boss zombie instead of a regular one
+    if (!player.usingBat && Math.random() < 0.09) {
         spawnBossZombie(pos);
         return; // Exit function after spawning boss to avoid spawning regular zombies
     }
@@ -314,8 +316,6 @@ function spawnZombie() {
     if (zombiesSpawned % 10 === 0 && gameSettings.spawnRate > gameSettings.minSpawnRate) {
         // Decrease spawn rate every 10 zombies, but cap at the minimum spawn rate
         gameSettings.spawnRate = Math.max(gameSettings.spawnRate - gameSettings.spawnRateDecrement, gameSettings.minSpawnRate);
-        stopSpawningZombies(); // Stop the current interval
-        startSpawningZombies(); // Restart with the new spawn rate
     }
 
     // Spawn the zombie and set its speed
