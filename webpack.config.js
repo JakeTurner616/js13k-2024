@@ -2,8 +2,8 @@ const path = require('path');
 const TerserPlugin = require('terser-webpack-plugin');
 const { execSync } = require('child_process');
 const fs = require('fs');
-const { Packer } = require('roadroller'); // Use Packer instead of compress
-const { strict } = require('assert'); // Use strict mode for mangle properties
+const { Packer } = require('roadroller');
+const { strict } = require('assert'); 
 
 module.exports = {
   mode: 'production',
@@ -20,7 +20,7 @@ module.exports = {
     minimizer: [
       new TerserPlugin({
         terserOptions: {
-          ecma: 6,
+          ecma: 6,  // Modern JavaScript (ES6+)
           compress: {
             drop_console: true,
             drop_debugger: true,
@@ -45,34 +45,22 @@ module.exports = {
     usedExports: true,  // Enable tree-shaking
     sideEffects: false,  // Assume no side effects in modules for better tree-shaking
   },
-  module: {
-    rules: [
-      {
-        test: /\.js$/,
-        exclude: /node_modules/,
-        use: {
-          loader: 'babel-loader',  // Optional: Transpile ES6+ code
-        },
-      },
-    ],
-  },
   plugins: [
     {
       apply: (compiler) => {
         compiler.hooks.afterEmit.tapAsync('AfterBuildPlugin', async (compilation, callback) => {
           try {
             console.log('Running Closure Compiler...');
-            execSync('npx google-closure-compiler --js dist/bundle.js --js_output_file dist/bundle.cc.js --compilation_level ADVANCED --language_out ECMASCRIPT_2021 jscomp_off=* --assume_function_wrapper --externs externs.js', { maxBuffer: 1024 * 1024 * 10 }); // Increase to 10MB
+            execSync('npx google-closure-compiler --js dist/bundle.js --js_output_file dist/bundle.cc.js --compilation_level ADVANCED --language_out ECMASCRIPT_2021 jscomp_off=* --assume_function_wrapper --externs externs.js', { maxBuffer: 1024 * 1024 * 10 });
             console.log('Closure Compiler step complete.');
 
             console.log('Running UglifyJS...');
-            execSync('npx uglify-js dist/bundle.cc.js -o dist/bundle.min.js --compress --mangle', { maxBuffer: 1024 * 1024 * 10 }); // Increase to 10MB
+            execSync('npx uglify-js dist/bundle.cc.js -o dist/bundle.min.js --compress --mangle', { maxBuffer: 1024 * 1024 * 10 });
             console.log('UglifyJS step complete.');
 
             console.log('Running Roadroller...');
             const inputFile = fs.readFileSync('dist/bundle.min.js', 'utf-8');
 
-            // Correct Roadroller usage with Packer
             const inputs = [
               {
                 data: inputFile,
@@ -82,9 +70,8 @@ module.exports = {
             ];
 
             const options = {
-              dictionarySize: 8192, // Adjust for more aggressive compression
-              usedDictionary: 8192, // Use as much of the dictionary as possible
-              
+              dictionarySize: 8192, 
+              usedDictionary: 8192, 
             };
 
             const packer = new Packer(inputs, options);

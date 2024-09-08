@@ -6,10 +6,8 @@
         "start": "http-server src"
     },
     "devDependencies": {
-        "@babel/core": "^7.24.8",
-        "@babel/preset-env": "^7.24.8",
+
         "archiver": "^7.0.1",
-        "babel-loader": "^9.1.3",
         "compression-webpack-plugin": "^11.1.0",
         "copy-webpack-plugin": "^12.0.2",
         "css-minimizer-webpack-plugin": "^2.0.0",
