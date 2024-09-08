@@ -81,8 +81,6 @@ export function drawShop() {
 
         drawTextScreen(item.name + ' - ' + item.cost + ' currency', itemPos, 30, textColor, 2, hsl(0, 0, 0));
     });
-
-    drawTextScreen('Click on an item to buy.', vec2(mainCanvas.width / 2, mainCanvas.height / 2 + 150), 20, hsl(0, 0, 1), 2, hsl(0, 0, 0));
 }
 
 

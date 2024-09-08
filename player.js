@@ -46,11 +46,6 @@ export class Player {
         this.melee = new Melee(this);
 
         // Clip drop properties (for other weapons)
-        this.clipDropped = false;
-        this.clipDropPos = null;
-        this.clipDropTime = 0;
-        this.clipFadeDuration = 4000;
-        this.clipRotation = 0;
         this.lastAngle = 0; // Store the last angle
     }
     update() {
@@ -66,7 +61,7 @@ export class Player {
     
         if (Math.abs(joystickX) > 0.1 || Math.abs(joystickY) > 0.1) {  // Threshold to avoid minor movements
             this.pos.x += joystickX * moveSpeed;
-            this.pos.y += joystickY * moveSpeed;  // Joystick Y is reversed (up is negative)
+            this.pos.y += joystickY * moveSpeed; 
             moved = true;
         }
     
@@ -281,7 +276,6 @@ if (!this.isSwinging) {
         sound_shoot.play(this.pos);
     
         if (this.currentAmmo === 0) {
-            this.dropClip();
             this.reload();
         }
     
@@ -294,14 +288,7 @@ if (!this.isSwinging) {
         this.reloadProgress = 0;
     }
 
-    dropClip() {
-        if (this.weapon === 'Shotgun') return;
 
-        this.clipDropped = true;
-        this.clipDropPos = vec2(this.pos.x, this.pos.y);
-        this.clipDropTime = 0;
-        this.clipRotation = Math.random() * Math.PI * 2;
-    }
     
     render() {
         let angle;
@@ -360,20 +347,7 @@ if (!this.isSwinging) {
             return; // Return early since baseball bat rendering is separate
         }
 
-        // Draw the dropped clip first to ensure it's below the player
-        if (this.clipDropped) {
-            const fadeProgress = 1 - (this.clipDropTime / this.clipFadeDuration); // Calculate fade-out progress
-            const clipColor = hsl(0, 0, 0.5, fadeProgress); // Grey color (0, 0, 0.5) with fading opacity
-            const clipBorderColor = hsl(0, 0, 0, fadeProgress); // Black border with fading opacity
 
-            // Clip dimensions
-            const clipWidth = weaponLength * 0.95;
-            const clipHeight = weaponLength * 0.35;
-
-            // Draw the outline with the same rotation
-            drawRect(this.clipDropPos, vec2(clipWidth + 0.06, clipHeight + 0.06), clipBorderColor, this.clipRotation); // Slightly larger for outline effect
-            drawRect(this.clipDropPos, vec2(clipWidth * 0.95, clipHeight * 0.95), clipColor, this.clipRotation); // Clip body with fading effect
-        }
 
         // Calculate the position of the right arm base (anchored at the player's shoulder)
         const armBaseOffset = vec2(Math.cos(angle + Math.PI / 2) * 0.7, Math.sin(angle + Math.PI / 2) * 0.7);

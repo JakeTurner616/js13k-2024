@@ -1,4 +1,4 @@
-import { vec2, engineInit, cameraScale, rand, hsl, mouseWasPressed, drawTextScreen, mousePos, drawText, setPaused, clearInput, setGamepadsEnable, setEnablePhysicsSolver} from './libs/littlejs.esm.min.js';
+import { vec2, engineInit, cameraScale, rand, hsl, mouseWasPressed, drawTextScreen, mousePos, drawText, setPaused, clearInput} from './libs/littlejs.esm.min.js';
 import { generateBiomeMap } from './biomeGenerator.js';
 import { Player } from './player.js';
 import { Zombie, Boomer, gameState, DeadlyDangler } from './zombie.js';
@@ -9,8 +9,7 @@ import { sound_lvl_up, sound_combo } from './sound.js';
 import { BossZombie } from './boss.js'; // Ensure to import the BossZombie class
 import { JoyStick } from './libs/joystick.js';
 
-setEnablePhysicsSolver(false); // Disable physics solver
-var mapCanvas = document.getElementById('mapCanvas');
+let mapCanvas = document.getElementById('mapCanvas');
 let zombiesSpawned = 0; // Track how many zombies have been spawned
 const DANGER_THRESHOLD = 6; // Number of zombies to spawn before allowing Deadly Danglers
 let isWindowFocused = true; // Flag to check if window is focused
@@ -23,10 +22,9 @@ let comboMessage = {
     fadeTime: 2.5, // Duration in seconds for which the message stays on screen
 };
 
-// Initialize focus state based on the current document focus
+
 isWindowFocused = document.hasFocus();
 setPaused(!isWindowFocused); // Pause if not focused
-
 // Event listener to resume game when the window gains focus
 window.addEventListener('focus', () => {
     isWindowFocused = true;
@@ -60,7 +58,6 @@ var joystick2;
 var joystick1;
 
 function gameInit() {
-
     // Create a common style object for joystick containers
     const joystickStyle = {
         width: '260px',
@@ -103,7 +100,7 @@ function gameInit() {
         joystick2 = new JoyStick('jd2', { title: 'joystick2' }, function () {});
     }
 
-    setGamepadsEnable(false); // Disable gamepad input for joystick control
+
     setupBiomeCanvas();
 
     generateBiomeMap(canvasState.biomeCanvas, {

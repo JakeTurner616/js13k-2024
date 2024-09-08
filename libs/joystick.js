@@ -40,12 +40,11 @@ const color = "rgba(0, 170, 0, 0.5)";
 export class JoyStick {
     constructor(container, parameters = {}, callback = () => {}) {
         this.title = parameters.title || "joystick";
-        this.internalFillColor = parameters.internalFillColor || color;
-        this.internalLineWidth = parameters.internalLineWidth || 2;
-        this.internalStrokeColor = parameters.internalStrokeColor || color;
-        this.externalLineWidth = parameters.externalLineWidth || 2;
-        this.externalStrokeColor = parameters.externalStrokeColor || color;
-        this.autoReturnToCenter = parameters.autoReturnToCenter !== undefined ? parameters.autoReturnToCenter : true;
+        this.internalFillColor = color;
+        this.internalLineWidth = 2;
+        this.externalLineWidth = 2;
+        this.externalStrokeColor = color;
+        this.autoReturnToCenter = true;
         this.callback = callback;
 
         // Set up canvas
@@ -94,8 +93,6 @@ export class JoyStick {
         this.context.fillStyle = this.internalFillColor;
         this.context.fill();
         this.context.lineWidth = this.internalLineWidth;
-        this.context.strokeStyle = this.internalStrokeColor;
-        this.context.stroke();
     }
 
     onTouchStart(event) {
