@@ -31,18 +31,13 @@ export function getCurrency() {
 
 export function setCurrency(value) {
     currency = value;
-    // Add any additional logic here, such as updating the UI, if needed
 }
 
 // Increment currency but never allow the cursed number for some reason
 export function addCurrency(amount) {
     const currentCurrency = getCurrency();
     const newCurrency = currentCurrency + amount;
-    if (newCurrency === 13 || newCurrency % 100 === 13) {
-        setCurrency(newCurrency + 1);
-    } else {
-        setCurrency(newCurrency);
-    }
+    setCurrency(newCurrency);
 }
 
 export class Bullet {

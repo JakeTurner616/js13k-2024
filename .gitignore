@@ -13,3 +13,6 @@ package-lock.json
 
 # Ignore yarn.lock for Yarn
 yarn.lock
+
+# Ignore .venv file
+.venv

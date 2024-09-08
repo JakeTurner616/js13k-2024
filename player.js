@@ -1,12 +1,16 @@
-import { keyIsDown, mouseIsDown, mousePos, vec2, drawRect, drawLine, hsl, cameraScale, gamepadStick, isTouchDevice } from './libs/littlejs.esm.min.js';
+import { keyIsDown, mouseIsDown, mousePos, vec2, drawRect, drawLine, hsl, cameraScale, isTouchDevice } from './libs/littlejs.esm.min.js';
 import { gameSettings } from './main.js';
 import { Bullet } from './bullet.js';
 import { sound_shoot, sound_reload, sound_swing } from './sound.js';
 import { setGameOver, Boomer, gameState } from './zombie.js';
 import { isInShop } from './shop.js';
-import { makeWalkingDust, makeMuzzleSmoke } from './effects.js';
+import { makeWalkingDust } from './effects.js';
 import { Melee } from './melee.js'; // Import Melee class for melee handling
-
+import { StickStatus, StickStatus2 } from './libs/joystick.js';
+// Linear interpolation function
+export function lerp(start, end, t) {
+    return start + (end - start) * t;
+}
 export class Player {
     constructor(pos) {
         this.pos = pos;
@@ -18,11 +22,11 @@ export class Player {
         this.isAutomatic = false; // No automatic fire for melee weapon
         this.lastShootTime = 0; // Last time the player shot
         this.shootDelay = 100;
-        this.pistolChamberDelay = 200; // 200ms delay between shots for Pistol
-        this.shotgunChamberDelay = 500; // 500ms delay between shots for Shotgun (adjust as needed)
+        this.pistolChamberDelay = 300; // 250ms delay between shots for Pistol
+        this.shotgunChamberDelay = 600; // 500ms delay between shots for Shotgun (adjust as needed)
         this.canShoot = true; // Flag to check if the player can shoot again
         this.wasMouseDown = false; // Track if the mouse was down in the previous frame
-        this.machineGunShootDelay = 200; // Machine Gun specific shoot delay
+        this.machineGunShootDelay = 160; // Machine Gun specific shoot delay
 
         this.magazineSize = 7; // Magazine size for Pistol and Machine Gun
         this.currentAmmo = this.magazineSize;
@@ -51,46 +55,59 @@ export class Player {
     }
     update() {
         if (setGameOver(false) || isInShop()) return;
-
+    
         const currentTime = performance.now();
-
-        // Player movement logic
         const moveSpeed = 0.1;
         let moved = false;
-
-    // Keyboard controls
-    if (keyIsDown('ArrowLeft')) {
-        this.pos.x -= moveSpeed;
-        moved = true;
-    }
-    if (keyIsDown('ArrowRight')) {
-        this.pos.x += moveSpeed;
-        moved = true;
-    }
-    if (keyIsDown('ArrowUp')) {
-        this.pos.y += moveSpeed;
-        moved = true;
-    }
-    if (keyIsDown('ArrowDown')) {
-        this.pos.y -= moveSpeed;
-        moved = true;
-    }
-    // Gamepad controls using LittleJS input system
-    const leftStick = gamepadStick(0); // Left stick (stick 0)
-    if (leftStick.length()) { // Check if the stick is being moved
-        this.pos.x += leftStick.x * moveSpeed;
-        this.pos.y += leftStick.y * moveSpeed;
-        moved = true;
-    }
-
-
+    
+        // First joystick controls movement (StickStatus)
+        const joystickX = StickStatus.x / 100;  // Normalize joystick value (-1 to 1)
+        const joystickY = StickStatus.y / 100;  // Normalize joystick value (-1 to 1)
+    
+        if (Math.abs(joystickX) > 0.1 || Math.abs(joystickY) > 0.1) {  // Threshold to avoid minor movements
+            this.pos.x += joystickX * moveSpeed;
+            this.pos.y += joystickY * moveSpeed;  // Joystick Y is reversed (up is negative)
+            moved = true;
+        }
+    
+        // Keyboard controls for movement (optional)
+        if (keyIsDown('ArrowLeft')) {
+            this.pos.x -= moveSpeed;
+            moved = true;
+        }
+        if (keyIsDown('ArrowRight')) {
+            this.pos.x += moveSpeed;
+            moved = true;
+        }
+        if (keyIsDown('ArrowUp')) {
+            this.pos.y += moveSpeed;
+            moved = true;
+        }
+        if (keyIsDown('ArrowDown')) {
+            this.pos.y -= moveSpeed;
+            moved = true;
+        }
+    
         this.isMoving = moved;
 
         // Handle melee attack
-        if (mouseIsDown(0) && this.weapon === 'Bat' && !this.isSwinging) {
+// Updated melee attack logic for touch and non-touch devices
+if (this.weapon === 'Bat' && !this.isSwinging) {
+    // On touch devices, use the right joystick to swing the bat
+    if (isTouchDevice) {
+        const rightStickMoved = parseFloat(StickStatus2.x) !== 0 || parseFloat(StickStatus2.y) !== 0;
+        if (rightStickMoved) {
             this.meleeAttack();
             setTimeout(() => { sound_swing.play(this.pos); }, 700);
         }
+    } else {
+        // On non-touch devices, use the mouse button to swing the bat
+        if (mouseIsDown(0)) {
+            this.meleeAttack();
+            setTimeout(() => { sound_swing.play(this.pos); }, 700);
+        }
+    }
+}
 
         // Handle swinging state and duration
         if (this.isSwinging) {
@@ -101,46 +118,48 @@ export class Player {
             }
         }
 
-        if (!this.isSwinging) {
-            // Handle reload logic
-            if (keyIsDown('KeyR') && !this.isReloading && this.currentAmmo < this.magazineSize) {
-                this.reload();
-            }
+// Fire logic for touch devices with joystick
+if (!this.isSwinging) {
+    // Handle reload logic
+    if (keyIsDown('KeyR') && !this.isReloading && this.currentAmmo < this.magazineSize) {
+        this.reload();
+    }
 
-            if (this.isReloading) {
-                this.reloadProgress += 1000 / 60 / this.reloadTime;
-                if (this.reloadProgress >= 1) {
-                    this.reloadProgress = 0;
-                    this.isReloading = false;
-                    this.currentAmmo = this.magazineSize;
-                }
-            }
+    if (this.isReloading) {
+        this.reloadProgress += 1000 / 60 / this.reloadTime;
+        if (this.reloadProgress >= 1) {
+            this.reloadProgress = 0;
+            this.isReloading = false;
+            this.currentAmmo = this.magazineSize;
+        }
+    }
 
-            // Automatic fire for Machine Gun
-            if (this.weapon === 'Machine Gun' && mouseIsDown(0) && !this.isReloading) {
-                if (currentTime - this.lastShootTime >= this.machineGunShootDelay) {
-                    this.shoot(mousePos); // Fire continuously while mouse is held down
-                    this.lastShootTime = currentTime;
-                }
-            }
+    // Check if the right stick is not centered
+    const rightStickMoved = parseFloat(StickStatus2.x) !== 0 || parseFloat(StickStatus2.y) !== 0;
 
-            // Semi-auto fire for Shotgun
-            else if (this.weapon === 'Shotgun' && !this.isReloading) {
-                if (mouseIsDown(0) && !this.wasMouseDown && this.canShoot && currentTime - this.lastShootTime >= this.shotgunChamberDelay) {
-                    this.shoot(mousePos); // Fire once when mouse is first pressed
-                    this.canShoot = false; // Disable shooting until mouse is released
-                    this.lastShootTime = currentTime;
-                }
-            }
+    // Fire logic based on right stick movement
+    if (rightStickMoved && !this.isReloading && this.canShoot) {
+        // Machine Gun
+        if (this.weapon === 'Machine Gun' && currentTime - this.lastShootTime >= this.machineGunShootDelay) {
+            this.shoot(); // Fire for Machine Gun
+            this.lastShootTime = currentTime;
+        }
+        // Shotgun
+        else if (this.weapon === 'Shotgun' && currentTime - this.lastShootTime >= this.shotgunChamberDelay) {
+            this.shoot(); // Fire for Shotgun
+            this.lastShootTime = currentTime;
+        }
+        // Pistol
+        else if (this.weapon === 'Pistol' && currentTime - this.lastShootTime >= this.pistolChamberDelay) {
+            this.shoot(); // Fire for Pistol
+            this.lastShootTime = currentTime;
+        }
+    }
 
-            // Semi-auto fire for Pistol
-            else if (this.weapon === 'Pistol' && !this.isReloading) {
-                if (mouseIsDown(0) && !this.wasMouseDown && this.canShoot && currentTime - this.lastShootTime >= this.pistolChamberDelay) {
-                    this.shoot(mousePos); // Fire once when mouse is first pressed
-                    this.canShoot = false; // Disable shooting until mouse is released
-                    this.lastShootTime = currentTime;
-                }
-            }
+
+
+
+
 
             // Reset shooting flag when the mouse is released
             if (!mouseIsDown(0)) {
@@ -164,6 +183,7 @@ export class Player {
                 if (!zombie.isDead && this.pos.distance(zombie.pos) < 1) {
                     if (!zombie.onFire || (zombie.onFire && zombie.fireSpreadTimer > 0)) {
                         this.isMoving = false;
+
                         setGameOver(true);
                     }
                 }
@@ -206,68 +226,66 @@ export class Player {
     }
 
 
-    shoot(targetPos) {
-        if (isInShop() || this.isReloading) return;
-        if (!this.hasGun()) return;
-
+    shoot() {
+        if (isInShop() || this.isReloading || !this.hasGun() || (isTouchDevice && StickStatus2.x == 0 && StickStatus2.y == 0)) return;
+    
         const currentTime = performance.now();
-
-        // Set appropriate delay based on the weapon type
-        let weaponDelay = this.shootDelay; // Default delay for automatic weapons like Machine Gun
-
-        if (this.weapon === 'Pistol') {
-            weaponDelay = this.pistolChamberDelay; // Use Pistol's delay between shots
-        } else if (this.weapon === 'Shotgun') {
-            weaponDelay = this.shotgunChamberDelay; // Use Shotgun's delay between shots
+        const weaponDelay = this.getWeaponDelay();
+    
+        if (currentTime - this.lastShootTime < weaponDelay || this.currentAmmo === 0) {
+            if (this.currentAmmo === 0) this.reload();
+            return;
         }
-
-        // Ensure the delay between shots is respected
-        if (currentTime - this.lastShootTime < weaponDelay) return;
-
-        if (this.currentAmmo > 0) {
-            let numBullets = 1;
-            let spread = 0.04;
-
-            // Calculate the direction and barrel tip position
-            const direction = targetPos.subtract(this.pos).normalize();
-            const barrelTip = this.pos.add(direction.scale(1.2)); // Position of the barrel tip (1.2 units away)
-            const barrelPadding = direction.scale(0.3); // Padding beyond the barrel tip (0.3 units further)
-
-            // Final position for the muzzle effects
-            const muzzlePos = barrelTip.add(barrelPadding);
-
-            // Adjust the number of bullets and spread for the Shotgun
-            if (this.weapon === 'Shotgun') {
-                numBullets = 5;
-                spread = 0.2;
-
-                // Create muzzle smoke and flash effects at the muzzle position
-                makeMuzzleSmoke(muzzlePos, 8, this.lastAngle);
-            }
-
-            // Fire the bullets based on the weapon
-            for (let i = 0; i < numBullets; i++) {
-                const spreadDirection = direction.rotate((Math.random() - 0.5) * spread);
-                // Spawn the bullets closer to the barrel tip
-                gameSettings.bullets.push(new Bullet(barrelTip, spreadDirection, this.fireAbility));
-            }
-
-            // Handle weapon effects
-            this.currentAmmo--;
-            sound_shoot.play(this.pos);
-
-            if (this.currentAmmo === 0 && this.weapon !== 'Shotgun') {
-                this.dropClip();
-                this.reload();
-            } else if (this.currentAmmo === 0) {
-                this.reload();
-            }
-
-            // Record the time of the last shot
-            this.lastShootTime = currentTime;
-        } else if (this.currentAmmo === 0) {
+    
+        const { direction, barrelTip, muzzlePos } = this.getShootingInfo();
+        const { numBullets, spread } = this.getWeaponSettings();
+    
+        for (let i = 0; i < numBullets; i++) {
+            const spreadDirection = direction.rotate((Math.random() - 0.5) * spread);
+            gameSettings.bullets.push(new Bullet(barrelTip, spreadDirection, this.fireAbility));
+        }
+    
+        this.handlePostShoot(currentTime);
+    }
+    
+    // Get delay based on the weapon type
+    getWeaponDelay() {
+        switch (this.weapon) {
+            case 'Pistol': return this.pistolChamberDelay;
+            case 'Shotgun': return this.shotgunChamberDelay;
+            default: return this.shootDelay;
+        }
+    }
+    
+    // Get shooting direction, barrel tip position, and muzzle position
+    getShootingInfo() {
+        const direction = isTouchDevice
+            ? vec2(StickStatus2.x / 100, StickStatus2.y / 100).normalize()
+            : mousePos.subtract(this.pos).normalize();
+    
+        const barrelTip = this.pos.add(direction.scale(1.2));
+        const muzzlePos = barrelTip.add(direction.scale(0.3));
+    
+        return { direction, barrelTip, muzzlePos };
+    }
+    
+    // Get number of bullets and spread based on weapon type
+    getWeaponSettings() {
+        return this.weapon === 'Shotgun' ? { numBullets: 5, spread: 0.2 } : { numBullets: 1, spread: 0 };
+    }
+    
+    
+    // Handle the effects after shooting
+    handlePostShoot(currentTime) {
+        this.currentAmmo--;
+        sound_shoot.play(this.pos);
+    
+        if (this.currentAmmo === 0) {
+            this.dropClip();
             this.reload();
         }
+    
+        this.lastShootTime = currentTime;
     }
 
     reload() {
@@ -284,26 +302,40 @@ export class Player {
         this.clipDropTime = 0;
         this.clipRotation = Math.random() * Math.PI * 2;
     }
-
+    
     render() {
-        // Calculate angle between player and mouse for direction
         let angle;
-        let angleDifference = 0; // Initialize angleDifference
+        let angleDifference = 0;
+        const smoothingFactor = 0.1; // Adjust this value to control the smoothness
+        
+        // Aiming logic
+        const dx = isTouchDevice ? StickStatus2.x / 100 : mousePos.x - this.pos.x;
+        const dy = isTouchDevice ? StickStatus2.y / 100 : mousePos.y - this.pos.y;
+        
         if (!gameState.gameOver && !isInShop(true)) {
-            // If the game is not over, calculate the angle towards the mouse cursor
-            const dx = mousePos.x - this.pos.x;
-            const dy = mousePos.y - this.pos.y;
-            angle = Math.atan2(dy, dx);
-
-            // Calculate the angle difference to adjust the swing dynamically
+            if (!isTouchDevice) {
+                angle = Math.atan2(dy, dx);
+            } else {
+                const joystickX2 = StickStatus2.x / 100;
+                const joystickY2 = StickStatus2.y / 100;
+    
+                if (Math.abs(joystickX2) > 0.1 || Math.abs(joystickY2) > 0.1) {
+                    const targetAngle = Math.atan2(joystickY2, joystickX2);
+                    angle = lerp(this.lastAngle, targetAngle, smoothingFactor); // Smooth angle change
+                } else {
+                    angle = this.lastAngle; // Maintain previous angle if no input
+                }
+            }
+    
+            // Calculate angle difference for aiming adjustments
             angleDifference = angle - this.lastAngle;
             angleDifference = ((angleDifference + Math.PI) % (2 * Math.PI)) - Math.PI; // Normalize angle difference
-
-            // Store the calculated angle as the last angle
+    
+            // Store the smoothed angle as the last angle
             this.lastAngle = angle;
         } else {
-            // If the game is over, keep the arms in their last position
-            angle = this.lastAngle; // Use the stored angle
+            // If the game is over, maintain the last angle
+            angle = this.lastAngle;
         }
 
 
@@ -438,70 +470,72 @@ export class Player {
 
 
     renderBaseballBat(playerAngle, angleDifference) {
-        const armLength = 1.4; // Length of the arm
-        const batLength = 0.9; // Total length of the bat
-        const batGripOffsetLeft = 0.5; // Offset for left arm grip position on the bat
-        const batGripOffsetRight = 0.8; // Offset for right arm grip position on the bat (further out)
-        const batColor = hsl(0.1, 1, 0.3); // Wooden color for the bat
-        const gripColor = hsl(0, 0, 0.7); // Light grey color for the grip
-
-        // Calculate the swing phase
-        const windUpDuration = 0.3; // Proportion of the total swing duration spent on winding up
-        let swingAngle = 0; // Angle for bat swinging
-        let windUpAngle = this.swingDirection * Math.PI / 7; // Wind up angle before swing (bat pulled back)
-        const overshootAmount = Math.PI / 14; // How much to overshoot the center
-
-        // Determine the swing phase (wind-up, actual swing, or overshoot)
+        const armLength = 1.4;
+        const batLength = 0.9;
+        const offsets = { left: 0.5, right: 0.8 }; // Arm grip offsets
+        const colors = { bat: hsl(0.1, 1, 0.3), grip: hsl(0, 0, 0.7), outline: hsl(0, 0, 0), arm: hsl(0.58, 0.8, 0.5) };
+    
+        const {  adjustedAngle } = this.calculateSwingAngle(playerAngle, angleDifference);
+    
+        const [leftArmGripPos, rightArmGripPos] = this.calculateArmGripPositions(adjustedAngle, armLength, offsets);
+    
+        const batTip = rightArmGripPos.add(vec2(Math.cos(adjustedAngle) * batLength, Math.sin(adjustedAngle) * batLength));
+        const batOutlineTip = batTip.add(vec2(Math.cos(adjustedAngle) * 0.03, Math.sin(adjustedAngle) * 0.03));
+    
+        // Draw player, arms, and bat
+        drawRect(this.pos, vec2(1, 1), colors.arm); // Player body
+        this.drawArms(leftArmGripPos, rightArmGripPos, colors); // Arms
+        this.drawBat(leftArmGripPos, rightArmGripPos, batTip, batOutlineTip, colors); // Bat
+    }
+    
+    calculateSwingAngle(playerAngle, angleDifference) {
+        const windUpDuration = 0.3;
+        const windUpAngle = this.swingDirection * Math.PI / 7;
+        const overshootAmount = Math.PI / 14;
+        let swingAngle = 0;
+    
         if (this.isSwinging) {
             if (this.swingProgress < windUpDuration) {
-                // Wind up phase
                 swingAngle = windUpAngle * (this.swingProgress / windUpDuration);
             } else {
-                // Swing phase
                 const swingProgress = (this.swingProgress - windUpDuration) / (1 - windUpDuration);
                 if (swingProgress < 0.5) {
-                    // First half of swing: move towards the center
                     swingAngle = windUpAngle - Math.sin(swingProgress * Math.PI) * (Math.PI / 3) * this.swingDirection;
                 } else {
                     this.detectHits(playerAngle + swingAngle);
-                    //console.log('hit detection fired');
-                    // Second half of swing: overshoot and return to center
-                    const overshootProgress = (swingProgress - 0.5) * 2; // Normalize to [0, 1] range
+                    const overshootProgress = (swingProgress - 0.5) * 2;
                     swingAngle = (Math.PI / 3 + overshootAmount) * Math.sin(overshootProgress * Math.PI) - overshootAmount;
-                    swingAngle *= this.swingDirection; // Adjust for swing direction
+                    swingAngle *= this.swingDirection;
                 }
             }
-
-            // Adjust swing based on player's rotation
-            swingAngle += angleDifference; // Adjust for character rotation
+            swingAngle += angleDifference;
         }
-
-        // Calculate the position of the right arm base (anchored at the player's shoulder)
-        const armBaseOffset = vec2(Math.cos(playerAngle + Math.PI / 2) * 0.5, Math.sin(playerAngle + Math.PI / 2) * 0.5);
+    
+        return { swingAngle, adjustedAngle: playerAngle + swingAngle };
+    }
+    
+    calculateArmGripPositions(angle, armLength, offsets) {
+        const leftArmGripPos = this.pos.add(vec2(Math.cos(angle) * armLength * offsets.left, Math.sin(angle) * armLength * offsets.left));
+        const rightArmGripPos = this.pos.add(vec2(Math.cos(angle) * armLength * offsets.right, Math.sin(angle) * armLength * offsets.right));
+    
+        return [leftArmGripPos, rightArmGripPos];
+    }
+    
+    drawArms(leftArmGripPos, rightArmGripPos, colors) {
+        const armBaseOffset = vec2(Math.cos(this.lastAngle + Math.PI / 2) * 0.5, Math.sin(this.lastAngle + Math.PI / 2) * 0.5);
         const leftArmBase = this.pos.add(armBaseOffset);
         const rightArmBase = this.pos.subtract(armBaseOffset);
-
-        // Calculate separate grip positions for each arm on the bat
-        const leftArmGripPos = this.pos.add(vec2(Math.cos(playerAngle + swingAngle) * armLength * batGripOffsetLeft, Math.sin(playerAngle + swingAngle) * armLength * batGripOffsetLeft));
-        const rightArmGripPos = this.pos.add(vec2(Math.cos(playerAngle + swingAngle) * armLength * batGripOffsetRight, Math.sin(playerAngle + swingAngle) * armLength * batGripOffsetRight));
-
-        // Calculate bat tip position (extend from the right arm grip position)
-        const batTip = rightArmGripPos.add(vec2(Math.cos(playerAngle + swingAngle) * batLength, Math.sin(playerAngle + swingAngle) * batLength));
-        const batOutlineTip = rightArmGripPos.add(vec2(Math.cos(playerAngle + swingAngle) * (batLength + 0.03), Math.sin(playerAngle + swingAngle) * (batLength + 0.03)));
-
-        // Draw the player
-        drawRect(this.pos, vec2(1, 1), hsl(0.58, 0.8, 0.5)); // Player body representation
-
-        // Draw the arms with different grip positions
-        drawLine(leftArmBase, leftArmGripPos, 0.18, hsl(0, 0, 0)); // Outline left arm
-        drawLine(rightArmBase, rightArmGripPos, 0.18, hsl(0, 0, 0)); // Outline right arm
-        drawLine(leftArmBase, leftArmGripPos, 0.13, hsl(0.58, 0.8, 0.5)); // Left arm
-        drawLine(rightArmBase, rightArmGripPos, 0.13, hsl(0.58, 0.8, 0.5)); // Right arm
-
-        // Draw the bat swinging
-        drawLine(leftArmGripPos, batTip, 0.12, gripColor); // Grip
-        drawLine(rightArmGripPos, batOutlineTip, 0.20, hsl(0, 0, 0)); // Bat outline
-        drawLine(rightArmGripPos, batTip, 0.14, batColor); // Bat body
+    
+        drawLine(leftArmBase, leftArmGripPos, 0.18, colors.outline);
+        drawLine(rightArmBase, rightArmGripPos, 0.18, colors.outline);
+        drawLine(leftArmBase, leftArmGripPos, 0.13, colors.arm);
+        drawLine(rightArmBase, rightArmGripPos, 0.13, colors.arm);
+    }
+    
+    drawBat(leftArmGripPos, rightArmGripPos, batTip, batOutlineTip, colors) {
+        drawLine(leftArmGripPos, batTip, 0.12, colors.grip); // Grip
+        drawLine(rightArmGripPos, batOutlineTip, 0.20, colors.outline); // Bat outline
+        drawLine(rightArmGripPos, batTip, 0.14, colors.bat); // Bat body
     }
 
     detectHits(swingAngle) {
@@ -529,27 +563,21 @@ export class Player {
     }
 
     addItem(itemName) {
+        const weaponConfig = {
+            'Pistol': { magazineSize: 8 },
+            'Shotgun': { magazineSize: 6 },
+            'Machine Gun': { magazineSize: 14 }
+        };
+    
         if (!this.items.includes(itemName)) {
             this.items.push(itemName);
         }
-
-        if (itemName === 'Pistol') {
-            this.weapon = itemName; // Switch to Pistol
-            this.magazineSize = 8; // Default Pistol magazine size
-            this.currentAmmo = this.magazineSize; // Reset current ammo to magazine 
-            this.usingBat = false; // No longer using the bat
-        }
-        else if (itemName === 'Shotgun') {
-            this.weapon = itemName; // Switch to Shotgun
-            this.magazineSize = 6; // Example Shotgun magazine size
-            this.currentAmmo = this.magazineSize; // Reset current ammo to magazine size
-            this.usingBat = false; // No longer using the bat
-        }
-        else if (itemName === 'Machine Gun') {
-            this.weapon = itemName; // Switch to Machine Gun
-            this.magazineSize = 13; // Set ammo size to 13 for Machine Gun
-            this.currentAmmo = this.magazineSize; // Reset current ammo to full magazine
-            this.usingBat = false; // No longer using the bat
+    
+        if (weaponConfig[itemName]) {
+            this.weapon = itemName;
+            this.magazineSize = weaponConfig[itemName].magazineSize;
+            this.currentAmmo = this.magazineSize;
+            this.usingBat = false;
         }
     }
 

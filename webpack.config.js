@@ -20,7 +20,7 @@ module.exports = {
     minimizer: [
       new TerserPlugin({
         terserOptions: {
-          ecma: 5,
+          ecma: 6,
           compress: {
             drop_console: true,
             drop_debugger: true,
@@ -62,7 +62,7 @@ module.exports = {
         compiler.hooks.afterEmit.tapAsync('AfterBuildPlugin', async (compilation, callback) => {
           try {
             console.log('Running Closure Compiler...');
-            execSync('npx google-closure-compiler --js dist/bundle.js --js_output_file dist/bundle.cc.js --compilation_level ADVANCED --language_out ECMASCRIPT_2020 --externs externs.js', { maxBuffer: 1024 * 1024 * 10 }); // Increase to 10MB
+            execSync('npx google-closure-compiler --js dist/bundle.js --js_output_file dist/bundle.cc.js --compilation_level ADVANCED --language_out ECMASCRIPT_2021 jscomp_off=* --assume_function_wrapper --externs externs.js', { maxBuffer: 1024 * 1024 * 10 }); // Increase to 10MB
             console.log('Closure Compiler step complete.');
 
             console.log('Running UglifyJS...');
@@ -84,10 +84,11 @@ module.exports = {
             const options = {
               dictionarySize: 8192, // Adjust for more aggressive compression
               usedDictionary: 8192, // Use as much of the dictionary as possible
+              
             };
 
             const packer = new Packer(inputs, options);
-            await packer.optimize();
+            await packer.optimize(2);
 
             const { firstLine, secondLine } = packer.makeDecoder();
             fs.writeFileSync('dist/bundle.roadrolled.js', firstLine + secondLine);

@@ -1,7 +1,8 @@
-import { vec2, drawRect, drawLine, hsl, PI } from './libs/littlejs.esm.min.js';
+import { vec2, drawRect, drawLine, hsl } from './libs/littlejs.esm.min.js';
 import { Zombie, gameState } from './zombie.js'; // Importing the base Zombie class and game state
 import { player, gameSettings } from './main.js'; // Import gameSettings from main.js
 import { makeFire, makeBlood } from './effects.js'; // Import fire effect utility
+import { lerp } from './player.js'; // Import linear interpolation utility
 
 export class BossZombie extends Zombie {
     constructor(pos) {
@@ -45,7 +46,7 @@ export class BossZombie extends Zombie {
     }
     initializeLegs() {
         const angleToPlayer = Math.atan2(player.pos.y - this.pos.y, player.pos.x - this.pos.x);
-        const totalSpreadAngle = PI; // Total spread angle for all legs around the body (180 degrees)
+        const totalSpreadAngle = Math.PI; // Total spread angle for all legs around the body (180 degrees)
         const angleBetweenLegs = totalSpreadAngle / (this.numLegs - 1); // Angle between each leg
 
         for (let i = 0; i < this.numLegs; i++) {
@@ -161,50 +162,38 @@ export class BossZombie extends Zombie {
     }
 
     updateLegs() {
-        if (this.isDead) return; // Stop updating legs if dead
-
+        if (this.isDead) return;
+    
         const angleToPlayer = Math.atan2(player.pos.y - this.pos.y, player.pos.x - this.pos.x);
-        const totalSpreadAngle = PI; // Total spread angle for all legs around the body (180 degrees)
-        const angleBetweenLegs = totalSpreadAngle / (this.numLegs - 1); // Angle between each leg
-
-        this.legs.forEach((leg, index) => {
-            leg.baseAngle = angleToPlayer - totalSpreadAngle / 2 + index * angleBetweenLegs;
-
+        const totalSpreadAngle = Math.PI;
+        const angleBetweenLegs = totalSpreadAngle / (this.numLegs - 1);
+    
+        this.legs.forEach((leg, i) => {
+            leg.baseAngle = angleToPlayer - totalSpreadAngle / 2 + i * angleBetweenLegs;
+    
             if (!leg.stepping) {
-                const dx = leg.targetX - (this.pos.x + Math.cos(leg.angle) * leg.currentLength);
-                const dy = leg.targetY - (this.pos.y + Math.sin(leg.angle) * leg.currentLength);
-                const distance = Math.sqrt(dx * dx + dy * dy);
-
-                if (distance > this.legLength / 2) {
+                const [dx, dy] = [leg.targetX - (this.pos.x + Math.cos(leg.angle) * leg.currentLength), leg.targetY - (this.pos.y + Math.sin(leg.angle) * leg.currentLength)];
+                if (Math.hypot(dx, dy) > this.legLength / 2) {
                     leg.stepping = true;
                     leg.stepProgress = 0;
                 }
             }
-
+    
             if (leg.stepping) {
-                leg.stepProgress += 0.1;
-                if (leg.stepProgress > 1) {
-                    leg.stepProgress = 1;
-                    leg.stepping = false;
-                }
-
-                const stepHeight = 0.2;
+                leg.stepProgress = Math.min(1, leg.stepProgress + 0.1);
+                if (leg.stepProgress === 1) leg.stepping = false;
+    
                 const stepX = this.pos.x + Math.cos(leg.baseAngle) * this.legLength;
                 const stepY = this.pos.y + Math.sin(leg.baseAngle) * this.legLength;
-                leg.targetX = this.lerp(leg.targetX, stepX, leg.stepProgress);
-                leg.targetY = this.lerp(leg.targetY, stepY - Math.sin(leg.stepProgress * PI) * stepHeight, leg.stepProgress);
+                const stepHeight = 0.2;
+                leg.targetX = lerp(leg.targetX, stepX, leg.stepProgress);
+                leg.targetY = lerp(leg.targetY, stepY - Math.sin(leg.stepProgress * Math.PI) * stepHeight, leg.stepProgress);
             }
-
-            const dx = leg.targetX - this.pos.x;
-            const dy = leg.targetY - this.pos.y;
-            const distance = Math.sqrt(dx * dx + dy * dy);
-            leg.currentLength = Math.min(this.legLength, distance);
+    
+            const [dx, dy] = [leg.targetX - this.pos.x, leg.targetY - this.pos.y];
+            leg.currentLength = Math.min(this.legLength, Math.hypot(dx, dy));
             leg.angle = Math.atan2(dy, dx);
         });
-    }
-
-    lerp(a, b, t) {
-        return a + (b - a) * t;
     }
 
     render() {

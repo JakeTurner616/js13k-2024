@@ -1,19 +1,19 @@
-import { vec2, engineInit, cameraScale, rand, hsl, mouseWasPressed, drawTextScreen, mousePos, drawText, setPaused, keyWasPressed, setTouchGamepadEnable, setTouchGamepadSize} from './libs/littlejs.esm.min.js';
+import { vec2, engineInit, cameraScale, rand, hsl, mouseWasPressed, drawTextScreen, mousePos, drawText, setPaused, clearInput, setGamepadsEnable, setEnablePhysicsSolver} from './libs/littlejs.esm.min.js';
 import { generateBiomeMap } from './biomeGenerator.js';
 import { Player } from './player.js';
 import { Zombie, Boomer, gameState, DeadlyDangler } from './zombie.js';
 import { setupBiomeCanvas, adjustCanvasSize, canvasState } from './CanvasUtils.js';
-import { handleShopMouseClick, handleShopInput, drawShop, isInShop, items } from './shop.js';
+import { handleShopMouseClick, drawShop, isInShop, items } from './shop.js';
 import { getCurrency, getScore, setScore, setCurrency } from './bullet.js';
 import { sound_lvl_up, sound_combo } from './sound.js';
 import { BossZombie } from './boss.js'; // Ensure to import the BossZombie class
+import { JoyStick } from './libs/joystick.js';
+
+setEnablePhysicsSolver(false); // Disable physics solver
+var mapCanvas = document.getElementById('mapCanvas');
 let zombiesSpawned = 0; // Track how many zombies have been spawned
 const DANGER_THRESHOLD = 6; // Number of zombies to spawn before allowing Deadly Danglers
-
 let isWindowFocused = true; // Flag to check if window is focused
-let isEnteringUsername = false; // Flag to track if we're in the username input state
-let username = ''; // Store the inputted username
-let showLeaderboard = false; // Flag to show the leaderboard
 // Combo message state
 let comboMessage = {
     active: false,
@@ -41,12 +41,12 @@ window.addEventListener('blur', () => {
 
 
 export const gameSettings = {
-    zombieSpeed: 0.025, // Starting speed
-    spawnRate: 1400, // Initial spawn rate in milliseconds
+    zombieSpeed: 0.020, // Starting speed
+    spawnRate: 1200, // Initial spawn rate in milliseconds
     minSpawnRate: 500, // Minimum spawn rate cap
     spawnRateDecrement: 50, // Decrease spawn rate by 50ms every interval
     speedIncrement: 0.001, // Speed increase per zombie spawn or score threshold
-    maxZombieSpeed: 0.1, // Maximum zombie speed cap
+    maxZombieSpeed: 0.1, // Maximum zombie speed cap about 4x the starting speed
     zombies: [],
     bullets: [],
     mapCanvas: document.getElementById('mapCanvas'),
@@ -54,31 +54,70 @@ export const gameSettings = {
     mapCanvasWidth: mapCanvas.width,
     mapCanvasHeight: mapCanvas.height
 };
-
 export let player;
 export let spawnInterval;
-export let EXPLOSION_RADIUS = 4.3; // Explosion kill radius
+var joystick2;
+var joystick1;
 
 function gameInit() {
-    setTouchGamepadSize(120)
-    setTouchGamepadEnable(true); // Enable touch gamepad for mobile devices
-    // Setup biome canvas and generate texture
+
+    // Create a common style object for joystick containers
+    const joystickStyle = {
+        width: '200px',
+        height: '200px',
+        position: 'absolute',
+        bottom: '20px'
+    };
+
+    // Function to apply the style to a joystick container
+    function applyJoystickStyle(container, position) {
+        Object.assign(container.style, joystickStyle);
+        container.style[position] = '20px'; // Either 'left' or 'right'
+    }
+
+    // Initialize the first joystick for movement
+    let joystickContainer1 = document.getElementById('jd');
+    if (!joystickContainer1) {
+        joystickContainer1 = document.createElement('div');
+        joystickContainer1.id = 'jd';
+        applyJoystickStyle(joystickContainer1, 'left');
+        document.body.appendChild(joystickContainer1);
+    }
+
+
+    if ('ontouchstart' in document.documentElement && document.getElementById('jd')) {
+        joystick1 = new JoyStick('jd', { title: 'joystick1' }, function () {});
+    }
+
+    // Initialize the second joystick for aiming/rotation
+    let joystickContainer2 = document.getElementById('jd2');
+    if (!joystickContainer2) {
+        joystickContainer2 = document.createElement('div');
+        joystickContainer2.id = 'jd2';
+        applyJoystickStyle(joystickContainer2, 'right');
+        document.body.appendChild(joystickContainer2);
+    }
+
+
+    if ('ontouchstart' in document.documentElement && document.getElementById('jd2')) {
+        joystick2 = new JoyStick('jd2', { title: 'joystick2' }, function () {});
+    }
+
+    setGamepadsEnable(false); // Disable gamepad input for joystick control
     setupBiomeCanvas();
 
     generateBiomeMap(canvasState.biomeCanvas, {
         desertThreshold: -1,
         shallowTerrianThreshold: 0.2,
         deepTerrianThreshold: -0.2,
-        grassThreshold: -.6,
         mountainThreshold: -0.75,
         snowThreshold: 1.9,
         noiseScale: 8
     });
 
-    player = new Player(vec2(0, 0));
-    startSpawningZombies();
+    player = new Player(vec2(0, 0)); // Initialize the player
 
-    adjustCanvasSize();
+    adjustCanvasSize(); // Adjust canvas size
     window.addEventListener('resize', adjustCanvasSize);
 
     gameSettings.mapCanvas.addEventListener('mousedown', handleShopMouseClick);
@@ -95,23 +134,17 @@ export function stopSpawningZombies() {
 
 function gameUpdate() {
     if (gameState.gameOver) {
-        if (!isEnteringUsername && !showLeaderboard) {
-            // Prompt for username immediately after game over
-            promptForUsername();
-        } else if (isEnteringUsername) {
-            handleUsernameInput(); // Handle username input
-        } else if (showLeaderboard && keyWasPressed('KeyR')) {
-            resetGame(); // Reset game on 'R' key press
+ if (mouseWasPressed(0)) {
+            resetGame(); // Reset game
         }
         return;
     }
 
     handleShopMouseClick();
-
     if (isInShop()) {
-        handleShopInput();
         return;
     }
+
 
     if (mouseWasPressed(0)) {
         player.shoot(mousePos);
@@ -151,32 +184,33 @@ function gameRender() {
 
     // Render game over text
     if (gameState.gameOver) {
-        drawTextScreen(
-            'Game Over',
-            vec2(gameSettings.mapCanvas.width / 2, gameSettings.mapCanvas.height / 2),
-            50, hsl(0, 0, 1), 10, hsl(0, 0, 0)
-        );
+        const centerX = gameSettings.mapCanvas.width / 2;
+        const centerY = gameSettings.mapCanvas.height / 2;
+    
+        // Common style variables
+        const color = hsl(0, 0, 1);
+        const outlineColor = hsl(0, 0, 0);
+        const outlineWidth = 10;
+    
+        // Game Over and Final Score
+        const texts = [
+            { text: 'Game Over', yOffset: 0, size: 50 },
+            { text: `Final Score: ${getScore()}`, yOffset: 60, size: 40 }
+        ];
+    
+       
+            texts.push({ text: 'Tap to Restart', yOffset: 180, size: 30 });
+    
+            // Listen for click or tap to restart
+            if (mouseWasPressed(0)) {
+                resetGame(); // Reset game on tap
+            }
 
-        drawTextScreen(
-            `Final Score: ${getScore()}`,
-            vec2(gameSettings.mapCanvas.width / 2, gameSettings.mapCanvas.height / 2 + 60),
-            40, hsl(0, 0, 1), 10, hsl(0, 0, 0)
-        );
-
-        if (isEnteringUsername) {
-            drawTextScreen(
-                `Enter Name: ${username}_`,
-                vec2(gameSettings.mapCanvas.width / 2, gameSettings.mapCanvas.height / 2 + 120),
-                30, hsl(0, 0, 1), 10, hsl(0, 0, 0)
-            );
-        } else if (showLeaderboard) {
-            drawLeaderboard();
-            drawTextScreen(
-                'Press R to Restart',
-                vec2(gameSettings.mapCanvas.width / 2, gameSettings.mapCanvas.height / 2 + 180),
-                30, hsl(0, 0, 1), 10, hsl(0, 0, 0)
-            );
-        }
+    
+        // Loop to draw all the text elements
+        texts.forEach(({ text, yOffset, size }) => {
+            drawTextScreen(text, vec2(centerX, centerY + yOffset), size, color, outlineWidth, outlineColor);
+        });
     }
 }
 
@@ -187,56 +221,34 @@ const beepThresholds = [10, 45, 75, 100];
 
 function gameRenderPost() {
     if (!gameState.gameOver) {
-        drawTextScreen(
-            'Score: ' + getScore() + '  Currency: ' + getCurrency(),
-            vec2(gameSettings.mapCanvas.width / 2, 70), 40,
-            hsl(0, 0, 1), 6, hsl(0, 0, 0)
-        );
+        const s = getScore(), c = getCurrency(), w = gameSettings.mapCanvas.width, t = vec2(150, 70);
+        drawTextScreen('Score: ' + s + '  Currency: ' + c, vec2(w / 2, 70), 40, hsl(0, 0, 1), 6, hsl(0, 0, 0));
 
-        const textPos = vec2(150, 70);
-        const currency = getCurrency();
-
-        // Check if the current currency matches any threshold and hasn't beeped yet
         beepThresholds.forEach(threshold => {
-            if (currency >= threshold && !beepedCurrencyLevels.includes(threshold)) {
-                sound_lvl_up.play(); // Play the beep sound
-                beepedCurrencyLevels.push(threshold); // Mark this threshold as triggered
+            if (c >= threshold && !beepedCurrencyLevels.includes(threshold)) {
+                sound_lvl_up.play();
+                beepedCurrencyLevels.push(threshold);
             }
         });
 
-        // Flash the `!` when the player can afford a new item
         if (!isInShop()) {
-            drawTextScreen('Enter Shop', textPos, 30, hsl(0, 0, 1), 4, hsl(0, 0, 0));
+            drawTextScreen('Enter Shop', t, 30, hsl(0, 0, 1), 4, hsl(0, 0, 0));
 
-            // Flash the `!` for affordable items
-            const affordableItems = items.filter(item => currency >= item.cost && !item.purchased);
-            const lowestAffordableItem = affordableItems.length > 0 ? affordableItems[0] : null;
-            if (lowestAffordableItem && currency >= lowestAffordableItem.cost) {
-                const flashPeriod = 1; // Time period for flashing in seconds
-                const time = performance.now() / 1000;
-                if (Math.floor(time / flashPeriod) % 2 === 0) {
-                    drawTextScreen('!', vec2(textPos.x + 90, textPos.y), 40, hsl(0, 1, 0.5), 4, hsl(0, 0, 0));
-                }
+            const a = items.filter(i => c >= i.cost && !i.purchased)[0];
+            if (a && c >= a.cost) {
+                const flash = Math.floor(performance.now() / 1000) % 2 === 0;
+                flash && drawTextScreen('!', vec2(t.x + 90, t.y), 40, hsl(0, 1, 0.5), 4, hsl(0, 0, 0));
             }
         } else {
-            drawTextScreen('Exit Shop', textPos, 30, hsl(0, 0, 1), 4, hsl(0, 0, 0));
+            drawTextScreen('Exit Shop', t, 30, hsl(0, 1, 0.5), 4, hsl(0, 0, 0));
         }
     }
 
-    // Handle combo message rendering and fading out
     if (comboMessage.active) {
-        const alpha = Math.max(0, comboMessage.displayTime / comboMessage.fadeTime); // Calculate alpha based on remaining time
-        drawText(
-            comboMessage.text,
-            comboMessage.position,
-            1,
-            hsl(0.1, 1, 0.5, alpha),
-        );
-
-        comboMessage.displayTime -= 1 / 60; // Assuming 60 FPS, reduce display time
-        if (comboMessage.displayTime <= 0) {
-            comboMessage.active = false; // Deactivate message when time runs out
-        }
+        const alpha = Math.max(0, comboMessage.displayTime / comboMessage.fadeTime);
+        drawText(comboMessage.text, comboMessage.position, 1, hsl(0.1, 1, 0.5, alpha));
+        comboMessage.displayTime -= 1 / 60;
+        if (comboMessage.displayTime <= 0) comboMessage.active = false;
     }
 }
 // Function to show combo messages at specific positions
@@ -267,165 +279,63 @@ function spawnBossZombie(position) {
 function spawnZombie() {
     if (!isWindowFocused || isInShop() || gameState.gameOver) return;
 
-    const halfCanvasWidth = (gameSettings.mapCanvas.width / 2) / cameraScale;
-    const halfCanvasHeight = (gameSettings.mapCanvas.height / 2) / cameraScale;
-    let spawnMargin = 2;
-    const edge = Math.floor(Math.random() * 4);
-    let pos;
+    const halfCanvasWidth = gameSettings.mapCanvas.width / 2 / cameraScale;
+    const halfCanvasHeight = gameSettings.mapCanvas.height / 2 / cameraScale;
+    const spawnMargin = 2;
+    const edges = [
+        vec2(rand(-halfCanvasWidth, halfCanvasWidth), halfCanvasHeight + spawnMargin),
+        vec2(halfCanvasWidth + spawnMargin, rand(-halfCanvasHeight, halfCanvasHeight)),
+        vec2(rand(-halfCanvasWidth, halfCanvasWidth), -halfCanvasHeight - spawnMargin),
+        vec2(-halfCanvasWidth - spawnMargin, rand(-halfCanvasHeight, halfCanvasHeight))
+    ];
 
-    const randomValue = Math.random();
-    let zombieType;
+    const pos = edges[Math.floor(Math.random() * 4)];
 
-    // Set the spawn position based on the edge
-    switch (edge) {
-        case 0:
-            pos = vec2(rand(-halfCanvasWidth, halfCanvasWidth), halfCanvasHeight + spawnMargin);
-            break;
-        case 1:
-            pos = vec2(halfCanvasWidth + spawnMargin, rand(-halfCanvasHeight, halfCanvasHeight));
-            break;
-        case 2:
-            pos = vec2(rand(-halfCanvasWidth, halfCanvasWidth), -halfCanvasHeight - spawnMargin);
-            break;
-        case 3:
-            pos = vec2(-halfCanvasWidth - spawnMargin, rand(-halfCanvasHeight, halfCanvasHeight));
-            break;
-    }
-
-    // If the player is no longer using the bat, introduce a 9% chance to spawn a boss zombie instead of a regular one
     if (!player.usingBat && Math.random() < 0.09) {
         spawnBossZombie(pos);
-        return; // Exit function after spawning boss to avoid spawning regular zombies
+        return;
     }
 
-    // Continue normal zombie spawning logic
-    if (randomValue < 0.15) {
-        zombieType = Boomer;
-    } else if (randomValue < 0.2 && zombiesSpawned >= DANGER_THRESHOLD) {
-        zombieType = DeadlyDangler;
-        spawnMargin *= 2;
-    } else {
-        zombieType = Zombie;
-    }
+    const zombieType = Math.random() < 0.15
+        ? Boomer
+        : (Math.random() < 0.2 && zombiesSpawned >= DANGER_THRESHOLD)
+            ? DeadlyDangler
+            : Zombie;
 
-    // Adjust zombie speed and spawn rate dynamically
-    if (zombiesSpawned % 10 === 0 && gameSettings.zombieSpeed < gameSettings.maxZombieSpeed) {
+    // Adjust zombie speed and spawn rate every 10 zombies
+    if (zombiesSpawned % 10 === 0) {
         gameSettings.zombieSpeed = Math.min(gameSettings.zombieSpeed + gameSettings.speedIncrement, gameSettings.maxZombieSpeed);
-    }
-
-    if (zombiesSpawned % 10 === 0 && gameSettings.spawnRate > gameSettings.minSpawnRate) {
-        // Decrease spawn rate every 10 zombies, but cap at the minimum spawn rate
         gameSettings.spawnRate = Math.max(gameSettings.spawnRate - gameSettings.spawnRateDecrement, gameSettings.minSpawnRate);
     }
 
-    // Spawn the zombie and set its speed
     const newZombie = new zombieType(pos);
-    newZombie.speed = gameSettings.zombieSpeed; // Apply updated speed to the new zombie
+    newZombie.speed = gameSettings.zombieSpeed;
     gameSettings.zombies.push(newZombie);
-
-    // Increment the zombie spawn count
     zombiesSpawned++;
 }
 function gameUpdatePost() {
     // If needed for any post-update operations
 }
 
-// Function to prompt the user for a username and update the leaderboard
-function promptForUsername() {
-    isEnteringUsername = true;
-    username = '';
-}
-
-function handleUsernameInput() {
-    if (keyWasPressed('Enter') && username.length > 0) {
-        saveScore(username, getScore());
-        isEnteringUsername = false;
-        showLeaderboard = true;
-    } else if (keyWasPressed('Backspace') && username.length > 0) {
-        username = username.slice(0, -1);
-    } else if (username.length < 3) {
-        // Check for A-Z key presses
-        for (let i = 0; i < 26; i++) {
-            const keyCode = `Key${String.fromCharCode(65 + i)}`; // 'KeyA' to 'KeyZ'
-            if (keyWasPressed(keyCode)) {
-                username += String.fromCharCode(65 + i); // Append the character to the username
-                break;
-            }
-        }
-    }
-}
-
-// Function to save the score to the local storage leaderboard with custom namespace
-function saveScore(username, score) {
-    try {
 
 
-        if (typeof window == 'undefined') {
-            return;
-        }
-        const leaderboardKey = 'Evacu13tion';
-        // Safely parse the leaderboard from localStorage or initialize an empty array if null
-        let leaderboard = JSON.parse(window.localStorage.getItem(leaderboardKey)) || [];
 
-        // Add new score and sort the leaderboard
-        leaderboard.push({ username, score });
-        leaderboard.sort((a, b) => b.score - a.score);
 
-        // Store the updated leaderboard back into localStorage
-        window.localStorage.setItem(leaderboardKey, JSON.stringify(leaderboard));
-    } catch (e) {
-        console.error("Failed to save score:", e);
-        // Optionally handle the error further or alert the user
-    }
-}
 
-// Function to draw the leaderboard
-// If the leaderboard cannot load entries, it is likley because it is pulling from an invalid namespace json object due to minification step.
-// I'll update this comment if I'm incorrect.
-function drawLeaderboard() {
-    try {
-        if (typeof window == 'undefined') {
-            return;
-
-        }
-        const leaderboardKey = 'Evacu13tion';
-        // Safely parse the leaderboard from localStorage or use an empty array if null
-        const leaderboard = JSON.parse(window.localStorage.getItem(leaderboardKey)) || [];
-
-        let yOffset = gameSettings.mapCanvas.height / 2 - 60; // Starting Y position for leaderboard display
-
-        drawTextScreen(
-            'Leaderboard:',
-            vec2(gameSettings.mapCanvas.width / 2, yOffset - 250),
-            30, hsl(0, 0, 1), 10, hsl(0, 0, 0)
-        );
-
-        // Display top 3 leaderboard entries
-        leaderboard.slice(0, 3).forEach((entry, index) => {
-            yOffset += 40; // Increase Y offset for each entry
-            drawTextScreen(
-                `${index + 1}. ${entry.username} - ${entry['score']}`,
-                vec2(gameSettings.mapCanvas.width / 2, yOffset - 250),
-                25, hsl(0, 0, 1), 10, hsl(0, 0, 0)
-            );
-        });
-    } catch (e) {
-    }
-}
 
 // Reset the game state
 function resetGame() {
+    clearInput();
     gameState.gameOver = false;
     setScore(0); // Reset score
     setCurrency(0); // Reset currency
     gameSettings.zombies = [];
     gameSettings.bullets = [];
-    gameSettings.zombieSpeed = 0.025;
-    gameSettings.spawnRate = 1400;
+    gameSettings.zombieSpeed = 0.020;
+    gameSettings.spawnRate = 1200;
 
     player = new Player(vec2(0, 0)); // Reset player position and state
-    startSpawningZombies(); // Restart zombie spawning
-    showLeaderboard = false; // Hide the leaderboard on reset
+    beepedCurrencyLevels = []; // Reset the beeped currency levels
 }
 
 // Start the game

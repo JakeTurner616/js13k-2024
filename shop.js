@@ -1,4 +1,4 @@
-import { mouseWasPressed, keyWasPressed, mousePosScreen, drawRect, drawTextScreen, hsl, vec2, mainCanvas } from './libs/littlejs.esm.min.js';
+import { mouseWasPressed, mousePosScreen, drawTextScreen, hsl, vec2, mainCanvas } from './libs/littlejs.esm.min.js';
 import { player, stopSpawningZombies, startSpawningZombies } from './main.js';
 import { getCurrency, setCurrency } from './bullet.js';
 
@@ -9,7 +9,7 @@ export function isInShop() {
     return inShop;
 }
 
-// Updated items list with the Pistol
+// Updated items list with the Pistol with 10, 45, 75, 100 beep thresholds
 export const items = [
     { name: 'Pistol', cost: 10, purchased: false },
     { name: 'Machine Gun', cost: 45, purchased: false },
@@ -44,7 +44,17 @@ export function handleShopMouseClick() {
 
     const textPos = vec2(50, 50);
     const textSize = vec2(200, 50);
+    items.forEach((item, index) => {
+        const itemPos = vec2(mainCanvas.width / 2, mainCanvas.height / 2 - 100 + index * 50);
+        const itemSize = vec2(300, 50); // Width and height of clickable item area
 
+        if (screenMousePos.x >= itemPos.x - itemSize.x / 2 && screenMousePos.x <= itemPos.x + itemSize.x / 2 &&
+            screenMousePos.y >= itemPos.y - itemSize.y / 2 && screenMousePos.y <= itemPos.y + itemSize.y / 2) {
+
+            setSelectedItem(index); // Set the clicked item as selected
+            buyItem(items[index]);  // Trigger purchase
+        }
+    });
     if (screenMousePos.x >= textPos.x && screenMousePos.x <= textPos.x + textSize.x &&
         screenMousePos.y >= textPos.y && screenMousePos.y <= textPos.y + textSize.y) {
 
@@ -54,38 +64,31 @@ export function handleShopMouseClick() {
             exitShop();
         }
     }
+    
 }
 
-export function handleShopInput() {
-    if (keyWasPressed('ArrowUp')) {
-        setSelectedItem((getSelectedItem() - 1 + items.length) % items.length);
-    }
-    if (keyWasPressed('ArrowDown')) {
-        setSelectedItem((getSelectedItem() + 1) % items.length);
-    }
-    if (keyWasPressed('Enter')) {
-        buyItem(items[getSelectedItem()]);
-    }
-    if (keyWasPressed('Escape')) {
-        exitShop();
-    }
-}
+
 
 export function drawShop() {
-    drawRect(vec2(mainCanvas.width / 2, mainCanvas.height / 2), vec2(300, 400), hsl(0, 0, .2), 10, hsl(0, 0, .5));
 
     items.forEach((item, index) => {
         const affordable = getCurrency() >= item.cost;
         const textColor = affordable ? (index === getSelectedItem() ? hsl(0, 0, 1) : hsl(0, 0, 0.7)) : hsl(0, 0, 0.3);
-        drawTextScreen(item.name + ' - ' + item.cost + ' currency', vec2(mainCanvas.width / 2, mainCanvas.height / 2 - 100 + index * 50), 30, textColor, 2, hsl(0, 0, 0));
+
+        // Larger clickable area for each item
+        const itemPos = vec2(mainCanvas.width / 2, mainCanvas.height / 2 - 100 + index * 50); // Position for each item
+
+
+        drawTextScreen(item.name + ' - ' + item.cost + ' currency', itemPos, 30, textColor, 2, hsl(0, 0, 0));
     });
 
-    drawTextScreen('Press Enter to buy, Esc to exit', vec2(mainCanvas.width / 2, mainCanvas.height / 2 + 150), 20, hsl(0, 0, 1), 2, hsl(0, 0, 0));
+    drawTextScreen('Click on an item to buy.', vec2(mainCanvas.width / 2, mainCanvas.height / 2 + 150), 20, hsl(0, 0, 1), 2, hsl(0, 0, 0));
 }
 
+
 export function enterShop() {
+
     setInShop(true);
-    handleShopInput();
 }
 
 export function exitShop() {
@@ -93,6 +96,9 @@ export function exitShop() {
 }
 
 function buyItem(item) {
+    if (!isInShop()) {
+        return;
+    }
     if (getCurrency() >= item.cost && !item.purchased) {
         setCurrency(getCurrency() - item.cost);
         player.addItem(item.name); // Add item to player's inventory

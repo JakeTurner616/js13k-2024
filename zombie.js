@@ -1,11 +1,11 @@
-import { vec2, drawRect, hsl, drawLine, PI } from './libs/littlejs.esm.min.js';
+import { vec2, drawRect, hsl, drawLine } from './libs/littlejs.esm.min.js';
 import { makeBlood, makeFire, makeExplosion } from './effects.js';
 import { sound_explode, sound_bat_hit } from './sound.js';
 import { player } from './main.js';
-import { EXPLOSION_RADIUS, gameSettings } from './main.js';
+import { gameSettings } from './main.js';
 import { incrementScore, addCurrency } from './bullet.js';
 import { showComboMessage } from './main.js';
-
+const EXPLOSION_RADIUS = 4.3; // Explosion kill radius
 export const gameState = {
     gameOver: false
 };
@@ -336,11 +336,11 @@ export class Boomer extends Zombie {
         this.time = (Math.random() * 0.4); // Time to control animation
 
         // Ensure min and max arm angles have a meaningful difference
-        this.minArmAngle = (Math.random() * PI / 16) + PI / 12; // Randomized minimum angle for arm swing
-        this.maxArmAngle = this.minArmAngle + (Math.random() * PI / 18) + PI / 18;  // Reduced maximum angle to make sway more subtle
+        this.minArmAngle = (Math.random() *  Math.PI / 16) + Math.PI / 12; // Randomized minimum angle for arm swing
+        this.maxArmAngle = this.minArmAngle + (Math.random() *  Math.PI / 18) +  Math.PI / 18;  // Reduced maximum angle to make sway more subtle
 
         // Randomized delay for arm movement to prevent synchronization
-        this.armDelay = Math.random() * PI; // Random delay to stagger arm movement
+        this.armDelay = Math.random() *  Math.PI; // Random delay to stagger arm movement
         this.frameDelay = Math.floor(Math.random() * 20) + 10; // Random frame delay between 10 to 30 frames
 
         // Frozen arm positions upon death
@@ -524,7 +524,7 @@ export class Boomer extends Zombie {
 
         // Oscillate arm angles to create a boomer-like staggered effect
         const upperArmAngle = angleToPlayer + Math.sin(this.time + this.armDelay) * (this.maxArmAngle - this.minArmAngle);
-        const forearmAngle = upperArmAngle + Math.sin(this.time + this.armDelay + PI / 4) * (this.maxArmAngle - this.minArmAngle);
+        const forearmAngle = upperArmAngle + Math.sin(this.time + this.armDelay +  Math.PI / 4) * (this.maxArmAngle - this.minArmAngle);
 
         // Calculate end position of the upper arm
         const upperArmEnd = basePos.add(vec2(Math.cos(upperArmAngle), Math.sin(upperArmAngle)).scale(upperArmLength));
@@ -549,7 +549,7 @@ export class Boomer extends Zombie {
         const angleToPlayer = Math.atan2(directionToPlayer.y, directionToPlayer.x);
 
         // Adjust the base position for the arms to track the player
-        const armBaseOffset = vec2(Math.cos(angleToPlayer + PI / 2 * side), Math.sin(angleToPlayer + PI / 2 * side)).scale(0.5);
+        const armBaseOffset = vec2(Math.cos(angleToPlayer +  Math.PI / 2 * side), Math.sin(angleToPlayer +  Math.PI / 2 * side)).scale(0.5);
         const basePos = this.pos.add(armBaseOffset);
 
         // Lengths of each arm segment
@@ -558,7 +558,7 @@ export class Boomer extends Zombie {
 
         // Oscillate arm angles to create a boomer-like staggered effect
         const upperArmAngle = angleToPlayer + Math.sin(this.time + this.armDelay) * (this.maxArmAngle - this.minArmAngle);
-        const forearmAngle = upperArmAngle + Math.sin(this.time + this.armDelay + PI / 4) * (this.maxArmAngle - this.minArmAngle);
+        const forearmAngle = upperArmAngle + Math.sin(this.time + this.armDelay +  Math.PI / 4) * (this.maxArmAngle - this.minArmAngle);
 
         // Calculate end position of the upper arm
         const upperArmEnd = basePos.add(vec2(Math.cos(upperArmAngle), Math.sin(upperArmAngle)).scale(upperArmLength));
@@ -596,7 +596,7 @@ export class DeadlyDangler extends Zombie {
         this.legThickness = 0.1; // Thickness of the tendrils
         this.numLegsPerSide = 3; // Three tendrils per side
         this.animationSpeed = 0.1; // Speed of tendril movement
-        this.legOffset = PI / 3; // Phase offset for tendril movement
+        this.legOffset =  Math.PI / 3; // Phase offset for tendril movement
         this.time = 0; // Time to control animation
         this.rotationSpeed = 0.05; // Speed of rotation toward the target direction
         this.movementSpeed = 0.02; // Speed of movement toward the player
@@ -634,7 +634,7 @@ export class DeadlyDangler extends Zombie {
         const randomFactors = [];
         for (let i = 0; i < this.numLegsPerSide * 2; i++) {
             randomFactors.push({
-                phaseShift: Math.random() * 2 * PI, // Random phase shift between 0 and 2*PI
+                phaseShift: Math.random() * 2 *  Math.PI, // Random phase shift between 0 and 2*PI
                 amplitudeVariation: Math.random() * 0.2 + 0.9 // Random amplitude variation between 0.9 and 1.1
             });
         }
@@ -717,7 +717,7 @@ export class DeadlyDangler extends Zombie {
             tibia: this.legLength * 0.5,
             metatarsus: this.legLength * 0.4,
             tarsus: this.legLength * 0.2,
-            claws: this.legLength * 0.1,
+            claws: this.legLength * 0.1
         };
 
         // Retrieve random factors for this tendril
@@ -729,18 +729,16 @@ export class DeadlyDangler extends Zombie {
         const targetAngle = Math.atan2(directionToPlayer.y, directionToPlayer.x);
 
         // Base angle movement for trailing tendril effect with added randomness
-        const t = (this.time + index * this.legOffset + phaseShift) % (2 * PI);
+        const t = (this.time + index * this.legOffset + phaseShift) % (2 *  Math.PI);
 
         // Angles for each segment, adjusted to point towards the player
         const angles = {
-            coxa: targetAngle + Math.sin(t) * PI / 12 * side * amplitudeVariation,
-            trochanter: targetAngle + Math.sin(t + PI / 8) * PI / 16 * side * amplitudeVariation,
-            femur: targetAngle + Math.sin(t + PI / 4) * PI / 10 * side * amplitudeVariation,
-            patella: targetAngle + Math.sin(t + PI / 3) * PI / 8 * side * amplitudeVariation,
-            tibia: targetAngle + Math.sin(t + PI / 2) * PI / 6 * side * amplitudeVariation,
-            metatarsus: targetAngle + Math.sin(t + (3 * PI) / 4) * PI / 8 * side * amplitudeVariation,
-            tarsus: targetAngle + Math.sin(t + PI) * PI / 12 * side * amplitudeVariation,
-            claws: targetAngle + Math.sin(t + (5 * PI) / 4) * PI / 16 * side * amplitudeVariation,
+            coxa: targetAngle + Math.sin(t) *  Math.PI / 12 * side * amplitudeVariation,
+            trochanter: targetAngle + Math.sin(t +  Math.PI / 8) * Math.PI / 16 * side * amplitudeVariation,
+            femur: targetAngle + Math.sin(t +  Math.PI / 4) *  Math.PI / 10 * side * amplitudeVariation,
+            patella: targetAngle + Math.sin(t +  Math.PI / 3) *  Math.PI / 8 * side * amplitudeVariation,
+            tibia: targetAngle + Math.sin(t +  Math.PI / 2) *  Math.PI / 6 * side * amplitudeVariation,
+            metatarsus: targetAngle + Math.sin(t + (3 *  Math.PI) / 4) *  Math.PI / 8 * side * amplitudeVariation
         };
 
         // Calculate positions for each segment's end point and check for collision
@@ -820,9 +818,7 @@ export class DeadlyDangler extends Zombie {
             femur: this.legLength * 0.6,
             patella: this.legLength * 0.4,
             tibia: this.legLength * 0.5,
-            metatarsus: this.legLength * 0.4,
-            tarsus: this.legLength * 0.2,
-            claws: this.legLength * 0.1,
+            metatarsus: this.legLength * 0.4
         };
 
         // Retrieve random factors for this tendril
@@ -841,18 +837,16 @@ export class DeadlyDangler extends Zombie {
         }
 
         // Base angle movement for trailing tendril effect with added randomness
-        const t = (this.time + index * this.legOffset + phaseShift) % (2 * PI);
+        const t = (this.time + index * this.legOffset + phaseShift) % (2 *  Math.PI);
 
         // Angles for each segment, adjusted to point towards the player
         const angles = {
-            coxa: targetAngle + Math.sin(t) * PI / 12 * side * amplitudeVariation,
-            trochanter: targetAngle + Math.sin(t + PI / 8) * PI / 16 * side * amplitudeVariation,
-            femur: targetAngle + Math.sin(t + PI / 4) * PI / 10 * side * amplitudeVariation,
-            patella: targetAngle + Math.sin(t + PI / 3) * PI / 8 * side * amplitudeVariation,
-            tibia: targetAngle + Math.sin(t + PI / 2) * PI / 6 * side * amplitudeVariation,
-            metatarsus: targetAngle + Math.sin(t + (3 * PI) / 4) * PI / 8 * side * amplitudeVariation,
-            tarsus: targetAngle + Math.sin(t + PI) * PI / 12 * side * amplitudeVariation,
-            claws: targetAngle + Math.sin(t + (5 * PI) / 4) * PI / 16 * side * amplitudeVariation,
+            coxa: targetAngle + Math.sin(t) *  Math.PI / 12 * side * amplitudeVariation,
+            trochanter: targetAngle + Math.sin(t +  Math.PI / 8) *  Math.PI / 16 * side * amplitudeVariation,
+            femur: targetAngle + Math.sin(t +  Math.PI / 4) *  Math.PI / 10 * side * amplitudeVariation,
+            patella: targetAngle + Math.sin(t +  Math.PI / 3) *  Math.PI / 8 * side * amplitudeVariation,
+            tibia: targetAngle + Math.sin(t +  Math.PI / 2) *  Math.PI / 6 * side * amplitudeVariation,
+            metatarsus: targetAngle + Math.sin(t + (3 * Math.PI) / 4) *  Math.PI / 8 * side * amplitudeVariation
         };
 
         // Determine the tendril color based on the DeadlyDangler's state
