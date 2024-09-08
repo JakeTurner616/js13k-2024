@@ -84,26 +84,23 @@ export class Player {
         }
     
         this.isMoving = moved;
-
+    
         // Handle melee attack
-// Updated melee attack logic for touch and non-touch devices
-if (this.weapon === 'Bat' && !this.isSwinging) {
-    // On touch devices, use the right joystick to swing the bat
-    if (isTouchDevice) {
-        const rightStickMoved = parseFloat(StickStatus2.x) !== 0 || parseFloat(StickStatus2.y) !== 0;
-        if (rightStickMoved) {
-            this.meleeAttack();
-            setTimeout(() => { sound_swing.play(this.pos); }, 700);
+        if (this.weapon === 'Bat' && !this.isSwinging) {
+            if (isTouchDevice) {
+                const rightStickMoved = parseFloat(StickStatus2.x) !== 0 || parseFloat(StickStatus2.y) !== 0;
+                if (rightStickMoved) {
+                    this.meleeAttack();
+                    setTimeout(() => { sound_swing.play(this.pos); }, 700);
+                }
+            } else {
+                if (mouseIsDown(0)) {
+                    this.meleeAttack();
+                    setTimeout(() => { sound_swing.play(this.pos); }, 700);
+                }
+            }
         }
-    } else {
-        // On non-touch devices, use the mouse button to swing the bat
-        if (mouseIsDown(0)) {
-            this.meleeAttack();
-            setTimeout(() => { sound_swing.play(this.pos); }, 700);
-        }
-    }
-}
-
+    
         // Handle swinging state and duration
         if (this.isSwinging) {
             this.swingProgress = (currentTime - this.lastSwingTime) / this.swingDuration;
@@ -112,59 +109,67 @@ if (this.weapon === 'Bat' && !this.isSwinging) {
                 this.swingProgress = 0;
             }
         }
-
-// Fire logic for touch devices with joystick
-if (!this.isSwinging) {
-    // Handle reload logic
-    if (keyIsDown('KeyR') && !this.isReloading && this.currentAmmo < this.magazineSize) {
-        this.reload();
-    }
-
-    if (this.isReloading) {
-        this.reloadProgress += 1000 / 60 / this.reloadTime;
-        if (this.reloadProgress >= 1) {
-            this.reloadProgress = 0;
-            this.isReloading = false;
-            this.currentAmmo = this.magazineSize;
+    
+        // Handle reload logic
+        if (keyIsDown('KeyR') && !this.isReloading && this.currentAmmo < this.magazineSize) {
+            this.reload();
         }
-    }
-
-    // Check if the right stick is not centered
-    const rightStickMoved = parseFloat(StickStatus2.x) !== 0 || parseFloat(StickStatus2.y) !== 0;
-
-    // Fire logic based on right stick movement
-    if (rightStickMoved && !this.isReloading && this.canShoot) {
-        // Machine Gun
-        if (this.weapon === 'Machine Gun' && currentTime - this.lastShootTime >= this.machineGunShootDelay) {
-            this.shoot(); // Fire for Machine Gun
-            this.lastShootTime = currentTime;
-        }
-        // Shotgun
-        else if (this.weapon === 'Shotgun' && currentTime - this.lastShootTime >= this.shotgunChamberDelay) {
-            this.shoot(); // Fire for Shotgun
-            this.lastShootTime = currentTime;
-        }
-        // Pistol
-        else if (this.weapon === 'Pistol' && currentTime - this.lastShootTime >= this.pistolChamberDelay) {
-            this.shoot(); // Fire for Pistol
-            this.lastShootTime = currentTime;
-        }
-    }
-
-
-
-
-
-
-            // Reset shooting flag when the mouse is released
-            if (!mouseIsDown(0)) {
-                this.canShoot = true; // Reset shooting state when mouse is released
+    
+        if (this.isReloading) {
+            this.reloadProgress += 1000 / 60 / this.reloadTime;
+            if (this.reloadProgress >= 1) {
+                this.reloadProgress = 0;
+                this.isReloading = false;
+                this.currentAmmo = this.magazineSize;
             }
-
-            // Track whether the mouse was down in the last frame
-            this.wasMouseDown = mouseIsDown(0);
         }
-
+    
+        // Fire logic for touch devices with joystick
+        const rightStickMoved = parseFloat(StickStatus2.x) !== 0 || parseFloat(StickStatus2.y) !== 0;
+        if (rightStickMoved && !this.isReloading && this.canShoot) {
+            if (this.weapon === 'Machine Gun' && currentTime - this.lastShootTime >= this.machineGunShootDelay) {
+                this.shoot(); // Fire for Machine Gun
+                this.lastShootTime = currentTime;
+            } else if (this.weapon === 'Shotgun' && currentTime - this.lastShootTime >= this.shotgunChamberDelay) {
+                this.shoot(); // Fire for Shotgun
+                this.lastShootTime = currentTime;
+            } else if (this.weapon === 'Pistol' && currentTime - this.lastShootTime >= this.pistolChamberDelay) {
+                this.shoot(); // Fire for Pistol
+                this.lastShootTime = currentTime;
+            }
+        }
+    
+        // Fire logic for non-touch devices
+        if (!isTouchDevice && mouseIsDown(0)) {
+            if (this.weapon === 'Machine Gun') {
+                // Automatic firing for the Machine Gun
+                if (currentTime - this.lastShootTime >= this.machineGunShootDelay) {
+                    this.shoot(); // Fire for Machine Gun
+                    this.lastShootTime = currentTime;
+                }
+            } else if (this.weapon === 'Shotgun') {
+                // Shotgun fires once per mouse click
+                if (!this.wasMouseDown && currentTime - this.lastShootTime >= this.shotgunChamberDelay) {
+                    this.shoot(); // Fire for Shotgun
+                    this.lastShootTime = currentTime;
+                }
+            } else if (this.weapon === 'Pistol') {
+                // Pistol fires once per mouse click
+                if (!this.wasMouseDown && currentTime - this.lastShootTime >= this.pistolChamberDelay) {
+                    this.shoot(); // Fire for Pistol
+                    this.lastShootTime = currentTime;
+                }
+            }
+        }
+    
+        // Reset shooting flag when the mouse is released
+        if (!mouseIsDown(0)) {
+            this.canShoot = true; // Reset shooting state when mouse is released
+        }
+    
+        // Track whether the mouse was down in the last frame
+        this.wasMouseDown = mouseIsDown(0);
+    
         // Constrain player within the window size
         const canvasWidth = gameSettings.mapCanvas.width;
         const canvasHeight = gameSettings.mapCanvas.height;
@@ -172,19 +177,17 @@ if (!this.isSwinging) {
         const halfVisibleHeight = (canvasHeight / 2) / cameraScale;
         this.pos.x = Math.max(-halfVisibleWidth, Math.min(this.pos.x, halfVisibleWidth));
         this.pos.y = Math.max(-halfVisibleHeight, Math.min(this.pos.y, halfVisibleHeight));
-
+    
         // Collision detection with zombies
-            gameSettings.zombies.forEach(zombie => {
-                if (!zombie.isDead && this.pos.distance(zombie.pos) < 1) {
-                    if (!zombie.onFire || (zombie.onFire && zombie.fireSpreadTimer > 0)) {
-                        this.isMoving = false;
-
-                        setGameOver(true);
-                    }
+        gameSettings.zombies.forEach(zombie => {
+            if (!zombie.isDead && this.pos.distance(zombie.pos) < 1) {
+                if (!zombie.onFire || (zombie.onFire && zombie.fireSpreadTimer > 0)) {
+                    this.isMoving = false;
+                    setGameOver(true);
                 }
-            });
-
-
+            }
+        });
+    
         const moveDirection = vec2(0, 0); // Initialize the move direction
         if (this.isMoving) {
             const offsetDistance = 0.4; // Distance to offset the particles behind the player
@@ -193,7 +196,7 @@ if (!this.isSwinging) {
             setTimeout(() => {
                 makeWalkingDust(particlePos); // Emit particles at the calculated position
             }, 100);
-
+    
             this.lastMoveDirection = moveDirection; // Update last move direction
         }
     }
