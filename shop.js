@@ -12,7 +12,7 @@ export function isInShop() {
 // Updated items list with the Pistol with 10, 45, 75, 100 beep thresholds
 export const items = [
     { name: 'Pistol', cost: 10, purchased: false },
-    { name: 'Machine Gun', cost: 45, purchased: false },
+    { name: 'SMG', cost: 45, purchased: false }, // renamed Machine Gun to SMG
     { name: 'Shotgun', cost: 75, purchased: false },
     { name: 'Fire Ability', cost: 100, purchased: false },
 ];
@@ -102,7 +102,7 @@ function buyItem(item) {
         player.addItem(item.name); // Add item to player's inventory
         item.purchased = true; // Mark item as purchased
 
-        if (item.name === 'Pistol' || item.name === 'Shotgun' || item.name === 'Machine Gun') {
+        if (item.name === 'Pistol' || item.name === 'Shotgun' || item.name === 'SMG') {
             player.weapon = item.name; // Automatically switch to the new weapon if it's a gun
         } else if (item.name === 'Fire Ability') {
             player.fireAbility = true; // Enable fire ability if purchased

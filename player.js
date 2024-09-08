@@ -26,9 +26,9 @@ export class Player {
         this.shotgunChamberDelay = 600; // 500ms delay between shots for Shotgun (adjust as needed)
         this.canShoot = true; // Flag to check if the player can shoot again
         this.wasMouseDown = false; // Track if the mouse was down in the previous frame
-        this.machineGunShootDelay = 160; // Machine Gun specific shoot delay
+        this.machineGunShootDelay = 160; // SMG specific shoot delay
 
-        this.magazineSize = 7; // Magazine size for Pistol and Machine Gun
+        this.magazineSize = 7; // Magazine size for Pistol and SMG
         this.currentAmmo = this.magazineSize;
         this.isReloading = false; // Track if the player is currently reloading
         this.reloadTime = 1000; // Total reload time in milliseconds
@@ -127,8 +127,8 @@ export class Player {
         // Fire logic for touch devices with joystick
         const rightStickMoved = parseFloat(StickStatus2.x) !== 0 || parseFloat(StickStatus2.y) !== 0;
         if (rightStickMoved && !this.isReloading && this.canShoot) {
-            if (this.weapon === 'Machine Gun' && currentTime - this.lastShootTime >= this.machineGunShootDelay) {
-                this.shoot(); // Fire for Machine Gun
+            if (this.weapon === 'SMG' && currentTime - this.lastShootTime >= this.machineGunShootDelay) {
+                this.shoot(); // Fire for SMG
                 this.lastShootTime = currentTime;
             } else if (this.weapon === 'Shotgun' && currentTime - this.lastShootTime >= this.shotgunChamberDelay) {
                 this.shoot(); // Fire for Shotgun
@@ -141,10 +141,10 @@ export class Player {
     
         // Fire logic for non-touch devices
         if (!isTouchDevice && mouseIsDown(0)) {
-            if (this.weapon === 'Machine Gun') {
-                // Automatic firing for the Machine Gun
+            if (this.weapon === 'SMG') {
+                // Automatic firing for the SMG
                 if (currentTime - this.lastShootTime >= this.machineGunShootDelay) {
-                    this.shoot(); // Fire for Machine Gun
+                    this.shoot(); // Fire for SMG
                     this.lastShootTime = currentTime;
                 }
             } else if (this.weapon === 'Shotgun') {
@@ -342,9 +342,9 @@ export class Player {
             weaponColor = hsl(0.08, 0.6, 0.4); // Brown color for Shotgun
             this.renderShotgunPump(angle); // Use the fancy shotgun pump logic
             return; // Return early since shotgun rendering is handled separately
-        } else if (this.weapon === 'Machine Gun') {
+        } else if (this.weapon === 'SMG') {
             weaponLength = 1.0;
-            weaponColor = hsl(0, 0, 0); // Black color for Machine Gun
+            weaponColor = hsl(0, 0, 0); // Black color for SMG
         } else if (this.weapon === 'Bat') {
             this.renderBaseballBat(angle, angleDifference);
             return; // Return early since baseball bat rendering is separate
@@ -543,7 +543,7 @@ export class Player {
         const weaponConfig = {
             'Pistol': { magazineSize: 8 },
             'Shotgun': { magazineSize: 6 },
-            'Machine Gun': { magazineSize: 14 }
+            'SMG': { magazineSize: 14 }
         };
     
         if (!this.items.includes(itemName)) {
@@ -559,6 +559,6 @@ export class Player {
     }
 
     hasGun() {
-        return this.items.includes('Shotgun') || this.items.includes('Machine Gun') || this.items.includes('Pistol');
+        return this.items.includes('Shotgun') || this.items.includes('SMG') || this.items.includes('Pistol');
     }
 }
