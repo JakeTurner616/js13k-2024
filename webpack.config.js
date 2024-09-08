@@ -20,7 +20,7 @@ module.exports = {
     minimizer: [
       new TerserPlugin({
         terserOptions: {
-          ecma: 6,  // Modern JavaScript (ES6+)
+          ecma: 2021,  // Modern JavaScript (ES6+)
           compress: {
             drop_console: true,
             drop_debugger: true,
@@ -36,7 +36,6 @@ module.exports = {
             toplevel: true,
             properties: {
               regex: /^[a-zA-Z_]\w*$/,  // Mangle all properties that match this regex
-              keep_quoted: strict,  // Do not mangle properties in quotes
             },
           },
         },
