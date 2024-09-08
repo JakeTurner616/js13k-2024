@@ -37,27 +37,30 @@
 export let StickStatus = { x: 0, y: 0 };
 export let StickStatus2 = { x: 0, y: 0 };
 const color = "rgba(0, 170, 0, 0.5)";
-
 export class JoyStick {
-    constructor(container, params = {}, cb = () => {}) {
-        this.title = params.title || "joystick";
-        this.internalFillColor = params.internalFillColor || color;
-        this.lineWidth = params.internalLineWidth || 2;
-        this.strokeColor = params.externalStrokeColor || color;
-        this.autoCenter = true;
-        this.cb = cb;
+    constructor(container, parameters = {}, callback = () => {}) {
+        this.title = parameters.title || "joystick";
+        this.internalFillColor = parameters.internalFillColor || color;
+        this.internalLineWidth = parameters.internalLineWidth || 2;
+        this.internalStrokeColor = parameters.internalStrokeColor || color;
+        this.externalLineWidth = parameters.externalLineWidth || 2;
+        this.externalStrokeColor = parameters.externalStrokeColor || color;
+        this.autoReturnToCenter = parameters.autoReturnToCenter !== undefined ? parameters.autoReturnToCenter : true;
+        this.callback = callback;
 
+        // Set up canvas
         const objContainer = document.getElementById(container);
         objContainer.style.touchAction = "none";
         this.canvas = document.createElement("canvas");
         this.canvas.id = this.title;
-        this.canvas.width = params.width || objContainer.clientWidth;
-        this.canvas.height = params.height || objContainer.clientHeight;
+        this.canvas.width = parameters.width || objContainer.clientWidth;
+        this.canvas.height = parameters.height || objContainer.clientHeight;
         objContainer.appendChild(this.canvas);
-        this.ctx = this.canvas.getContext("2d");
+        this.context = this.canvas.getContext("2d");
 
+        // Initialize joystick parameters
         this.pressed = 0;
-        this.internalRadius = (this.canvas.width / 2 - 10) / 2;
+        this.internalRadius = (this.canvas.width - ((this.canvas.width / 2) + 10)) / 2;
         this.maxMoveStick = this.internalRadius + 5;
         this.externalRadius = this.internalRadius + 30;
         this.centerX = this.canvas.width / 2;
@@ -65,82 +68,83 @@ export class JoyStick {
         this.movedX = this.centerX;
         this.movedY = this.centerY;
 
-        const isTouch = "ontouchstart" in document.documentElement;
-        if (isTouch) {
-            this.canvas.addEventListener("touchstart", this.start.bind(this), false);
-            document.addEventListener("touchmove", this.move.bind(this), false);
-            document.addEventListener("touchend", this.end.bind(this), false);
-        } else {
-            document.addEventListener("mouseup", this.end.bind(this), false);
+        // Touch event listeners
+        if ("ontouchstart" in document.documentElement) {
+            this.canvas.addEventListener("touchstart", this.onTouchStart.bind(this), false);
+            document.addEventListener("touchmove", this.onTouchMove.bind(this), false);
+            document.addEventListener("touchend", this.onTouchEnd.bind(this), false);
         }
 
-        this.draw();
+        // Initial drawing
+        this.drawExternal();
+        this.drawInternal();
     }
 
-    draw() {
-        const { ctx, centerX, centerY, externalRadius, internalRadius, movedX, movedY, lineWidth, strokeColor, internalFillColor } = this;
-        ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        ctx.lineWidth = lineWidth;
-
-        // Draw external
-        ctx.beginPath();
-        ctx.arc(centerX, centerY, externalRadius, 0, Math.PI * 2, false);
-        ctx.strokeStyle = strokeColor;
-        ctx.stroke();
-
-        // Draw internal
-        ctx.beginPath();
-        ctx.arc(movedX, movedY, internalRadius, 0, Math.PI * 2, false);
-        ctx.fillStyle = internalFillColor;
-        ctx.fill();
+    drawExternal() {
+        this.context.beginPath();
+        this.context.arc(this.centerX, this.centerY, this.externalRadius, 0, 2 * Math.PI, false);
+        this.context.lineWidth = this.externalLineWidth;
+        this.context.strokeStyle = this.externalStrokeColor;
+        this.context.stroke();
     }
 
-    start(e) {
+    drawInternal() {
+        this.context.beginPath();
+        this.context.arc(this.movedX, this.movedY, this.internalRadius, 0, 2 * Math.PI, false);
+        this.context.fillStyle = this.internalFillColor;
+        this.context.fill();
+        this.context.lineWidth = this.internalLineWidth;
+        this.context.strokeStyle = this.internalStrokeColor;
+        this.context.stroke();
+    }
+
+    onTouchStart(event) {
         this.pressed = 1;
-        this.touchId = e.targetTouches ? e.targetTouches[0].identifier : null;
+        this.touchId = event.targetTouches[0].identifier;
     }
 
-    move(e) {
-        if (!this.pressed) return;
-        const rect = this.canvas.getBoundingClientRect();
-        const x = e.targetTouches ? e.targetTouches[0].clientX : e.clientX;
-        const y = e.targetTouches ? e.targetTouches[0].clientY : e.clientY;
-        this.movedX = x - rect.left;
-        this.movedY = y - rect.top;
+    onTouchMove(event) {
+        if (this.pressed === 1 && event.targetTouches[0].target === this.canvas) {
+            const rect = this.canvas.getBoundingClientRect();
+            this.movedX = event.targetTouches[0].clientX - rect.left;
+            this.movedY = event.targetTouches[0].clientY - rect.top;
 
-        const deltaX = this.movedX - this.centerX;
-        const deltaY = this.movedY - this.centerY;
-        const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+            const deltaX = this.movedX - this.centerX;
+            const deltaY = this.movedY - this.centerY;
+            const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
 
-        if (distance > this.maxMoveStick) {
-            const ratio = this.maxMoveStick / distance;
-            this.movedX = this.centerX + deltaX * ratio;
-            this.movedY = this.centerY + deltaY * ratio;
+            if (distance > this.maxMoveStick) {
+                const ratio = this.maxMoveStick / distance;
+                this.movedX = this.centerX + deltaX * ratio;
+                this.movedY = this.centerY + deltaY * ratio;
+            }
+
+            this.updateStickStatus();
         }
-
-        this.updateStatus();
     }
 
-    end(e) {
-        if (e.changedTouches && e.changedTouches[0].identifier !== this.touchId) return;
+    onTouchEnd(event) {
+        if (event.changedTouches[0].identifier !== this.touchId) return;
         this.pressed = 0;
-        if (this.autoCenter) {
+        if (this.autoReturnToCenter) {
             this.movedX = this.centerX;
             this.movedY = this.centerY;
         }
-        this.updateStatus();
+        this.updateStickStatus();
     }
 
-    updateStatus() {
-        const { centerX, centerY, maxMoveStick, movedX, movedY, title } = this;
-        const normalizedX = (movedX - centerX) / maxMoveStick;
-        const normalizedY = -(movedY - centerY) / maxMoveStick;
+    updateStickStatus() {
+        this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        this.drawExternal();
+        this.drawInternal();
 
-        const status = title === "joystick2" ? StickStatus2 : StickStatus;
-        status.x = normalizedX * 100;  // Range between -100 and 100
-        status.y = normalizedY * 100;
+        const normalizedX = (this.movedX - this.centerX) / this.maxMoveStick;
+        const normalizedY = (this.movedY - this.centerY) / this.maxMoveStick;
 
-        this.cb(status);
-        this.draw();
+        const status = this.title === "joystick1" ? StickStatus : StickStatus2;
+        status.x = (normalizedX * 100).toFixed();
+        status.y = (-normalizedY * 100).toFixed();
+
+        this.callback(status);
     }
 }

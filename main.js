@@ -63,8 +63,8 @@ function gameInit() {
 
     // Create a common style object for joystick containers
     const joystickStyle = {
-        width: '200px',
-        height: '200px',
+        width: '260px',
+        height: '260px',
         position: 'absolute',
         bottom: '20px'
     };
@@ -195,7 +195,7 @@ function gameRender() {
         // Game Over and Final Score
         const texts = [
             { text: 'Game Over', yOffset: 0, size: 50 },
-            { text: `Final Score: ${getScore()}`, yOffset: 60, size: 40 }
+            { text: `Score: ${getScore()}`, yOffset: 60, size: 40 }
         ];
     
        
