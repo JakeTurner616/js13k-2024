@@ -109,11 +109,7 @@ export class Player {
                 this.swingProgress = 0;
             }
         }
-    
-        // Handle reload logic
-        if (keyIsDown('KeyR') && !this.isReloading && this.currentAmmo < this.magazineSize) {
-            this.reload();
-        }
+
     
         if (this.isReloading) {
             this.reloadProgress += 1000 / 60 / this.reloadTime;
