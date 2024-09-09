@@ -2,7 +2,7 @@ import zipfile
 import os
 
 def create_zip(files, output_zip):
-    # Create a zip file with LZMA compression (more aggressive than DEFLATED)
+    # Create a zip file
     with zipfile.ZipFile(output_zip, 'w', compression=zipfile.ZIP_DEFLATED, compresslevel=9) as zipf:
         for file in files:
             # Write the file to the zip archive without the directory structure

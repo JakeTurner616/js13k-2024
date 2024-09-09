@@ -484,6 +484,10 @@ export class Boomer extends Zombie {
         }
     }
 }
+function addToComboChain(chain, zombie) {
+    chain.zombies.add(zombie);
+    chain.lastZombiePosition = new vec2(zombie.pos.x, zombie.pos.y); // Update last known position
+}
 export class DeadlyDangler extends Zombie {
     constructor(pos) {
         super(pos); // Call the parent class constructor first

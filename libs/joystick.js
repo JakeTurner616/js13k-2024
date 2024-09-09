@@ -44,7 +44,7 @@ export class JoyStick {
         this.internalLineWidth = 2;
         this.externalLineWidth = 2;
         this.externalStrokeColor = color;
-        this.autoReturnToCenter = true;
+
         this.callback = callback;
 
         // Set up canvas
@@ -123,10 +123,10 @@ export class JoyStick {
     onTouchEnd(event) {
         if (event.changedTouches[0].identifier !== this.touchId) return;
         this.pressed = 0;
-        if (this.autoReturnToCenter) {
+
             this.movedX = this.centerX;
             this.movedY = this.centerY;
-        }
+
         this.updateStickStatus();
     }
 

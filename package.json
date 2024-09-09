@@ -6,7 +6,6 @@
         "start": "http-server src"
     },
     "devDependencies": {
-
         "archiver": "^7.0.1",
         "compression-webpack-plugin": "^11.1.0",
         "copy-webpack-plugin": "^12.0.2",
@@ -18,6 +17,7 @@
         "google-closure-compiler-js": "^20200719.0.0",
         "html-webpack-plugin": "^5.3.1",
         "http-server": "^14.1.1",
+        "prepack": "^0.2.54",
         "roadroller": "^2.1.0",
         "terser": "^5.31.6",
         "terser-webpack-plugin": "^5.3.10",

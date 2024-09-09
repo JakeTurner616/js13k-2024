@@ -1,3 +1,4 @@
+'use strict';
 import { vec2, engineInit, cameraScale, rand, hsl, mouseWasPressed, drawTextScreen, mousePos, drawText, setPaused, clearInput} from './libs/littlejs.esm.min.js';
 import { generateBiomeMap } from './biomeGenerator.js';
 import { Player } from './player.js';
