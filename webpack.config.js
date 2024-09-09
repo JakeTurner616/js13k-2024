@@ -29,7 +29,7 @@ module.exports = {
             module: true,
             drop_console: true,
             drop_debugger: true,
-            passes: 20,
+            passes: 500,
             toplevel: true,
             unsafe: true,
             unsafe_arrows: true,

@@ -18,36 +18,30 @@ export class Player {
         this.items = ['Bat']; // Initialize with default item
         this.usingBat = true; // Track whether the player is using the bat
         this.fireAbility = false;
-
         this.isAutomatic = false; // No automatic fire for melee weapon
         this.lastShootTime = 0; // Last time the player shot
         this.shootDelay = 100;
         this.pistolChamberDelay = 300; // 250ms delay between shots for Pistol
         this.shotgunChamberDelay = 600; // 500ms delay between shots for Shotgun (adjust as needed)
+        this.machineGunShootDelay = 160; // SMG specific shoot delay
         this.canShoot = true; // Flag to check if the player can shoot again
         this.wasMouseDown = false; // Track if the mouse was down in the previous frame
-        this.machineGunShootDelay = 160; // SMG specific shoot delay
-
-        this.magazineSize = 7; // Magazine size for Pistol
-        this.currentAmmo = this.magazineSize;
+        this.amN = 6; // Set initial magazine size from config (AmmoN)
+        this.currentAmmo = this.amN;
         this.isReloading = false; // Track if the player is currently reloading
         this.reloadTime = 1000; // Total reload time in milliseconds
         this.reloadProgress = 0; // Progress of reload animation (0 to 1)
         this.reloadAnimationDuration = 1; // Duration of the reload animation in seconds
-
         this.isMoving = false;
         this.isSwinging = false; // Track melee swing
         this.swingDuration = 1000; // Duration of a melee swing in milliseconds
         this.lastSwingTime = 0; // Last time the player performed a swing
         this.swingProgress = 0; // Progress of the current swing
         this.swingDirection = 1; // Swing direction: 1 for right, -1 for left
-
-        // Initialize Melee instance
-        this.melee = new Melee(this);
-
-        // Clip drop properties (for other weapons)
+        this.melee = new Melee(this); // Initialize Melee instance
         this.lastAngle = 0; // Store the last angle
     }
+
     update() {
         if (setGameOver(false) || isInShop()) return;
     
@@ -116,7 +110,7 @@ export class Player {
             if (this.reloadProgress >= 1) {
                 this.reloadProgress = 0;
                 this.isReloading = false;
-                this.currentAmmo = this.magazineSize;
+                this.currentAmmo = this.amN;
             }
         }
     
@@ -124,6 +118,7 @@ export class Player {
         const rightStickMoved = parseFloat(StickStatus2.x) !== 0 || parseFloat(StickStatus2.y) !== 0;
         if (rightStickMoved && !this.isReloading && this.canShoot) {
             if (this.weapon === 'SMG' && currentTime - this.lastShootTime >= this.machineGunShootDelay) {
+
                 this.shoot(); // Fire for SMG
                 this.lastShootTime = currentTime;
             } else if (this.weapon === 'Shotgun' && currentTime - this.lastShootTime >= this.shotgunChamberDelay) {
@@ -138,6 +133,7 @@ export class Player {
         // Fire logic for non-touch devices
         if (!isTouchDevice && mouseIsDown(0)) {
             if (this.weapon === 'SMG') {
+                
                 // Automatic firing for the SMG
                 if (currentTime - this.lastShootTime >= this.machineGunShootDelay) {
                     this.shoot(); // Fire for SMG
@@ -334,11 +330,16 @@ export class Player {
             weaponLength = 0.6;
             weaponColor = hsl(0, 0, 0.5); // Grey color for Pistol
         } else if (this.weapon === 'Shotgun') {
+            this.amN = 5;
             weaponLength = 0.8;
             weaponColor = hsl(0.08, 0.6, 0.4); // Brown color for Shotgun
             this.renderShotgunPump(angle); // Use the fancy shotgun pump logic
             return; // Return early since shotgun rendering is handled separately
         } else if (this.weapon === 'SMG') {
+
+                this.amN = 14;
+    
+
             weaponLength = 1.0;
             weaponColor = hsl(0, 0, 0); // Black color for SMG
         } else if (this.weapon === 'Bat') {
@@ -536,22 +537,11 @@ export class Player {
     }
 
     addItem(itemName) {
-        const weaponConfig = {
-            'Pistol': { magazineSize: 7 }, // Set Pistol magazine size to 7
-            'Shotgun': { magazineSize: 6 }, // Assuming 6 is correct for the Shotgun
-            'SMG': { magazineSize: 14 } // Set SMG magazine size to 14
-        };
-    
         if (!this.items.includes(itemName)) {
             this.items.push(itemName);
         }
     
-        if (weaponConfig[itemName]) {
-            this.weapon = itemName;
-            this.magazineSize = weaponConfig[itemName].magazineSize;
-            this.currentAmmo = this.magazineSize; // Refill ammo to full magazine size
-            this.usingBat = false;
-        }
+
     }
 
     hasGun() {
