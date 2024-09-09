@@ -28,7 +28,7 @@ export class Player {
         this.wasMouseDown = false; // Track if the mouse was down in the previous frame
         this.machineGunShootDelay = 160; // SMG specific shoot delay
 
-        this.magazineSize = 7; // Magazine size for Pistol and SMG
+        this.magazineSize = 7; // Magazine size for Pistol
         this.currentAmmo = this.magazineSize;
         this.isReloading = false; // Track if the player is currently reloading
         this.reloadTime = 1000; // Total reload time in milliseconds
@@ -541,9 +541,9 @@ export class Player {
 
     addItem(itemName) {
         const weaponConfig = {
-            'Pistol': { magazineSize: 8 },
-            'Shotgun': { magazineSize: 6 },
-            'SMG': { magazineSize: 14 }
+            'Pistol': { magazineSize: 7 }, // Set Pistol magazine size to 7
+            'Shotgun': { magazineSize: 6 }, // Assuming 6 is correct for the Shotgun
+            'SMG': { magazineSize: 14 } // Set SMG magazine size to 14
         };
     
         if (!this.items.includes(itemName)) {
@@ -553,7 +553,7 @@ export class Player {
         if (weaponConfig[itemName]) {
             this.weapon = itemName;
             this.magazineSize = weaponConfig[itemName].magazineSize;
-            this.currentAmmo = this.magazineSize;
+            this.currentAmmo = this.magazineSize; // Refill ammo to full magazine size
             this.usingBat = false;
         }
     }
