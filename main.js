@@ -12,7 +12,7 @@ import { JoyStick } from './libs/joystick.js';
 
 let mapCanvas = document.getElementById('mapCanvas');
 let zombiesSpawned = 0; // Track how many zombies have been spawned
-const DANGER_THRESHOLD = 10; // Number of zombies to spawn before allowing Deadly Danglers
+const DANGER_THRESHOLD = 10; // Number of zombies to spawn before allowing Deadly Danglers, bosses and increasing speed
 let isWindowFocused = true; // Flag to check if window is focused
 // Combo message state
 let comboMessage = {
@@ -299,8 +299,8 @@ function spawnZombie() {
             ? DeadlyDangler
             : Zombie;
 
-    // Adjust zombie speed and spawn rate every 10 zombies
-    if (zombiesSpawned % 10 === 0) {
+    // Adjust zombie speed and spawn rate every DANGER_THRESHOLD zombies
+    if (zombiesSpawned % DANGER_THRESHOLD === 0) {
         gameSettings.zombieSpeed = Math.min(gameSettings.zombieSpeed + gameSettings.speedIncrement, gameSettings.maxZombieSpeed);
         gameSettings.spawnRate = Math.max(gameSettings.spawnRate - gameSettings.spawnRateDecrement, gameSettings.minSpawnRate);
     }
