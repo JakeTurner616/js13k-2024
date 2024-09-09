@@ -12,7 +12,7 @@ import { JoyStick } from './libs/joystick.js';
 
 let mapCanvas = document.getElementById('mapCanvas');
 let zombiesSpawned = 0; // Track how many zombies have been spawned
-const DANGER_THRESHOLD = 6; // Number of zombies to spawn before allowing Deadly Danglers
+const DANGER_THRESHOLD = 10; // Number of zombies to spawn before allowing Deadly Danglers
 let isWindowFocused = true; // Flag to check if window is focused
 // Combo message state
 let comboMessage = {
@@ -289,9 +289,8 @@ function spawnZombie() {
 
     const pos = edges[Math.floor(Math.random() * 4)];
 
-    if (!player.usingBat && Math.random() < 0.09) {
+    if (Math.random() < 0.09 && zombiesSpawned >= DANGER_THRESHOLD) {
         spawnBossZombie(pos);
-        return;
     }
 
     const zombieType = Math.random() < 0.15
