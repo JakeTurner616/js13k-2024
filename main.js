@@ -326,13 +326,14 @@ function resetGame() {
     gameState.gameOver = false;
     setScore(0); // Reset score
     setCurrency(0); // Reset currency
+    zombiesSpawned = 0; // Reset zombies spawned count
     gameSettings.zombies = [];
     gameSettings.bullets = [];
     gameSettings.zombieSpeed = 0.020;
     gameSettings.spawnRate = 1200;
-
     player = new Player(vec2(0, 0)); // Reset player position and state
     beepedCurrencyLevels = []; // Reset the beeped currency levels
+
 }
 
 // Start the game
