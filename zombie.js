@@ -325,18 +325,15 @@ export class Boomer extends Zombie {
         // Iterate over all zombies to apply explosion effects
         gameSettings.zombies.forEach(zombie => {
             if (this.pos.distance(zombie.pos) < EXPLOSION_RADIUS) {
-                // Damage or affect zombies that are within the blast radius
+                // If zombie is not already dead
                 if (zombie !== this && !zombie.isDead) {
                     if (typeof zombie.takeExplosionDamage === 'function') {
-                        zombie.takeExplosionDamage(); // Damage zombie
+                        zombie.takeExplosionDamage();
                     }
-
-                    // Ensure all zombies in range catch fire
+                    // Ensure all zombies catch fire but don't die instantly
                     if (!zombie.onFire) {
-                        zombie.catchFire(); // Set zombie on fire
+                        zombie.catchFire();  // Only set them on fire, don't mark as dead
                     }
-
-                    comboCount++; // Increase combo count for each affected zombie
                 }
             }
         });
@@ -488,8 +485,8 @@ export class DeadlyDangler extends Zombie {
         super(pos); // Call the parent class constructor first
 
         // Initialize unique properties for DeadlyDangler
-        this.tendrilLength = 2.5; // Length of the deadly tendrils
-        this.legLength = 1.5; // Base length scale for tendrils
+        this.tendrilLength = 2.6; // Length of the deadly tendrils
+        this.legLength = 1.6; // Base length scale for tendrils
         this.legThickness = 0.1; // Thickness of the tendrils
         this.numLegsPerSide = 3; // Three tendrils per side
         this.animationSpeed = 0.1; // Speed of tendril movement
@@ -506,7 +503,7 @@ export class DeadlyDangler extends Zombie {
         for (let i = 0; i < this.numLegsPerSide * 2; i++) {
             randomFactors.push({
                 phaseShift: Math.random() * 2 *  Math.PI, // Random phase shift between 0 and 2*PI
-                amplitudeVariation: Math.random() * 0.2 + 0.9 // Random amplitude variation between 0.9 and 1.1
+                amplitudeVariation: Math.random() * 0.2 + 0.8 // Random amplitude variation
             });
         }
         return randomFactors;
@@ -525,22 +522,27 @@ export class DeadlyDangler extends Zombie {
 
         // Fire handling for DeadlyDangler
         if (this.onFire && !this.isDead) {
-            this.isDead = true;
+            this.spreadFire();
             const nearestChain = findNearestChain(this);
             nearestChain ? nearestChain.zombies.add(this) : startComboChain(this);
+            if (!this.fireEmitter) {
             this.fireEmitter = makeFire(this.pos);
+        };
             if (this.fadeOutTimer > 0) {
+                this.spreadFire();
                 this.fadeOutTimer -= 1 / 60;
                 if (this.fadeOutTimer <= 0) {
                     this.deathTimer = 0;
                     if (this.fireEmitter) this.fireEmitter.emitRate = 0;
+                    this.isDead = true;
+                    
                 }
             }
-
+            
         }
 
         // If not dead, update movement and tendrils
-        if (!this.isDead) {
+        if (!this.isDead && !this.onFire) {
             this.time += this.animationSpeed; // Update time for animation
 
             // Move towards the player
@@ -563,88 +565,53 @@ export class DeadlyDangler extends Zombie {
             }
         }
     }
+    // Override the catchFire method to freeze tendrils
+    catchFire() {
+        if (!this.onFire && !this.isDead) {
+            this.onFire = true;
+            this.fireEmitter = makeFire(this.pos);
+
+            // Store the current angle to retain it while on fire
+            const directionToPlayer = player.pos.subtract(this.pos).normalize();
+            this.lastTargetAngle = Math.atan2(directionToPlayer.y, directionToPlayer.x);
+        }
+    }
+
 
     checkTendrilCollision(playerPos) {
-        // Check each tendril segment for collision with the player
-        for (let side = -1; side <= 1; side += 2) { // -1 for left side, 1 for right side
+        const collisionRadius = 0.5; // Define a radius threshold for collision
+    
+        // Loop over each tendril side (-1 for left, 1 for right)
+        for (let side = -1; side <= 1; side += 2) {
+            // Loop over each tendril
             for (let i = 0; i < this.numLegsPerSide; i++) {
-                if (this.checkTendrilSegmentCollision(side, i, playerPos)) {
+                const tendrilTipPos = this.getTendrilTipPosition(side, i);
+                if (tendrilTipPos.distance(playerPos) < collisionRadius) {
                     return true; // Collision detected
                 }
             }
         }
         return false; // No collision detected
     }
-
-    checkTendrilSegmentCollision(side, index, playerPos) { // Check for collision within a single tendril or segment 
-        // Adjust base position to start from left or right edge of the body
-        const baseOffsetX = (1 / 2 + this.legThickness / 2) * side; // Move to left or right edge
-        const baseOffsetY = (index - (this.numLegsPerSide - 1) / 2) * (1 / this.numLegsPerSide);
+    
+    getTendrilTipPosition(side, index) {
+        // Calculate the base position of the tendril
+        const baseOffsetX = (1 / 2 + this.legThickness / 2) * side; // Offset for side (-1 for left, 1 for right)
+        const baseOffsetY = (index - (this.numLegsPerSide - 1) / 2) * (1 / this.numLegsPerSide); // Adjust position based on leg index
         const basePos = this.pos.add(vec2(baseOffsetX, baseOffsetY));
-
-        // Define lengths for each tendril segment
-        const lengths = {
-            coxa: this.legLength * 0.3,
-            trochanter: this.legLength * 0.2,
-            femur: this.legLength * 0.6,
-            patella: this.legLength * 0.4,
-            tibia: this.legLength * 0.5,
-
-        };
-
-        // Retrieve random factors for this tendril
-        const legIndex = index + (side === 1 ? this.numLegsPerSide : 0);
-        const { phaseShift, amplitudeVariation } = this.randomFactors[legIndex];
-
-        // Calculate direction towards the player
+    
+        // Calculate the direction and angle based on current movement and animation
         const directionToPlayer = player.pos.subtract(this.pos).normalize();
         const targetAngle = Math.atan2(directionToPlayer.y, directionToPlayer.x);
-
-        // Base angle movement for trailing tendril effect with added randomness
-        const t = (this.time + index * this.legOffset + phaseShift) % (2 *  Math.PI);
-
-        // Angles for each segment, adjusted to point towards the player
-        const angles = {
-            coxa: targetAngle + Math.sin(t) *  Math.PI / 12 * side * amplitudeVariation,
-            trochanter: targetAngle + Math.sin(t +  Math.PI / 8) * Math.PI / 16 * side * amplitudeVariation,
-            femur: targetAngle + Math.sin(t +  Math.PI / 4) *  Math.PI / 10 * side * amplitudeVariation,
-            patella: targetAngle + Math.sin(t +  Math.PI / 3) *  Math.PI / 8 * side * amplitudeVariation,
-            tibia: targetAngle + Math.sin(t +  Math.PI / 2) *  Math.PI / 6 * side * amplitudeVariation,
-
-        };
-
-        // Calculate positions for each segment's end point and check for collision
-        let currentPos = basePos;
-        for (const [key, length] of Object.entries(lengths)) {
-            const angle = angles[key];
-            const nextPos = currentPos.add(vec2(Math.cos(angle), Math.sin(angle)).scale(length));
-
-            // Check if the player is close to the current segment of the tendril
-            if (this.isPointNearSegment(playerPos, currentPos, nextPos, this.legThickness)) {
-                return true; // Collision detected
-            }
-
-            currentPos = nextPos; // Move to the next position
-        }
-
-        return false; // No collision detected with any segment
-    }
-
-    isPointNearSegment(point, start, end, radius) {
-        // Calculate the distance from the point to the line segment
-        const lineVec = end.subtract(start);
-        const pointVec = point.subtract(start);
-        const lineLength = lineVec.length();
-        const lineDirection = lineVec.normalize();
-        const projectionLength = pointVec.dot(lineDirection);
-
-        // Clamp projection length to be within the segment
-        const clampedProjection = Math.max(0, Math.min(projectionLength, lineLength));
-        const closestPoint = start.add(lineDirection.scale(clampedProjection));
-        const distanceToPoint = closestPoint.subtract(point).length();
-
-        // Check if the distance to the closest point on the line segment is within the radius
-        return distanceToPoint <= radius;
+        const t = (this.time + index * this.legOffset + this.randomFactors[index].phaseShift) % (2 * Math.PI);
+    
+        // Calculate the final angle for the tendril tip
+        const tendrilAngle = targetAngle + Math.sin(t) * side * this.randomFactors[index].amplitudeVariation;
+    
+        // Define the tendril tip position based on its length and the calculated angle
+        const tendrilTipPos = basePos.add(vec2(Math.cos(tendrilAngle), Math.sin(tendrilAngle)).scale(this.tendrilLength));
+    
+        return tendrilTipPos; // Return the position of the tendril tip
     }
 
     render() {
@@ -662,7 +629,11 @@ export class DeadlyDangler extends Zombie {
             } else {
                 color = hsl(0, 0, 0.2, opacity); // Grey when dead and not on fire
             }
-        } else {
+        } if (this.onFire) {
+            color = hsl(0.1, 1, 0.5, opacity); // Burning color (orange) if on fire and alive
+        }
+        
+        else {
             color = hsl(0.3, 1, 0.5, opacity); // Normal color (green) when alive and not on fire
         }
 
@@ -678,6 +649,16 @@ export class DeadlyDangler extends Zombie {
     }
 
     drawTendril(side, index, opacity) {
+        // If on fire, use the last stored angle, otherwise calculate the direction to the player
+        const targetAngle = this.onFire || this.isDead 
+            ? this.lastTargetAngle // Use the stored angle if on fire or dead
+            : (() => { // Calculate the new angle if alive and not on fire
+                const directionToPlayer = player.pos.subtract(this.pos).normalize();
+                const angle = Math.atan2(directionToPlayer.y, directionToPlayer.x);
+                this.lastTargetAngle = angle; // Store it as the last angle
+                return angle;
+            })();
+        
         // Adjust base position to start from left or right edge of the body
         const baseOffsetX = (1 / 2 + this.legThickness / 2) * side; // Move to left or right edge
         const baseOffsetY = (index - (this.numLegsPerSide - 1) / 2) * (1 / this.numLegsPerSide);
@@ -685,13 +666,6 @@ export class DeadlyDangler extends Zombie {
     
         // Simplified segment lengths for the tendril
         const segmentLengths = [0.3, 0.2, 0.6, 0.4, 0.5].map(factor => this.legLength * factor);
-    
-        // Calculate direction to the player or retain the last angle if dead
-        const directionToPlayer = player.pos.subtract(this.pos).normalize();
-        const targetAngle = this.isDead ? this.lastTargetAngle : Math.atan2(directionToPlayer.y, directionToPlayer.x);
-    
-        // Save last angle if alive
-        if (!this.isDead) this.lastTargetAngle = targetAngle;
     
         // Base angle and tendril sway effect
         const t = (this.time + index * this.legOffset + this.randomFactors[index].phaseShift) % (2 * Math.PI);

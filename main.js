@@ -12,7 +12,7 @@ import { JoyStick } from './libs/joystick.js';
 
 let mapCanvas = document.getElementById('mapCanvas');
 let zombiesSpawned = 0; // Track how many zombies have been spawned
-const DANGER_THRESHOLD = 10; // Number of zombies to spawn before allowing Deadly Danglers, bosses and increasing speed
+const DANGER_THRESHOLD = 1; // Number of zombies to spawn before allowing Deadly Danglers, bosses and increasing speed
 let isWindowFocused = true; // Flag to check if window is focused
 // Combo message state
 let comboMessage = {
