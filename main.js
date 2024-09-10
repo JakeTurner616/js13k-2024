@@ -289,7 +289,7 @@ function spawnZombie() {
 
     const pos = edges[Math.floor(Math.random() * 4)];
 
-    if (Math.random() < 0.09 && zombiesSpawned >= DANGER_THRESHOLD) {
+    if (Math.random() < 0.09 && zombiesSpawned >= DANGER_THRESHOLD && getScore() > DANGER_THRESHOLD) { // Spawn a boss zombie with a 9% chance after DANGER_THRESHOLD zombies spawned and score > DANGER_THRESHOLD
         spawnBossZombie(pos);
     }
 

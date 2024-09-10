@@ -21,8 +21,8 @@ export class Player {
         this.isAutomatic = false; // No automatic fire for melee weapon
         this.lastShootTime = 0; // Last time the player shot
         this.shootDelay = 100;
-        this.pistolChamberDelay = 300; // 250ms delay between shots for Pistol
-        this.shotgunChamberDelay = 600; // 500ms delay between shots for Shotgun (adjust as needed)
+        this.pistolChamberDelay = 300; // 300ms delay between shots for Pistol
+        this.shotgunChamberDelay = 400; // 400ms delay between shots for Shotgun 
         this.machineGunShootDelay = 160; // SMG specific shoot delay
         this.canShoot = true; // Flag to check if the player can shoot again
         this.wasMouseDown = false; // Track if the mouse was down in the previous frame

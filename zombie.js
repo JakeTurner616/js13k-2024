@@ -86,11 +86,10 @@ export class Zombie {
     }
 
     handleDeathFadeOut() {
-        if (this.fadeOutTimer > 0) {
-            this.fadeOutTimer -= 1 / 60;
-            if (this.fadeOutTimer <= 0 && this.fireEmitter) this.fireEmitter.emitRate = 0;
-        } else {
-            this.fadeOutTimer = 0; // Set it to zero to prevent negative timer
+        if ((this.fadeOutTimer -= 1 / 60) <= 0) {
+            if (this.fireEmitter) this.fireEmitter.emitRate = 0;
+            gameSettings.zombies.splice(gameSettings.zombies.indexOf(this), 1);
+            comboChains.forEach(chain => chain.zombies.delete(this));
         }
     }
 
@@ -484,10 +483,6 @@ export class Boomer extends Zombie {
         }
     }
 }
-function addToComboChain(chain, zombie) {
-    chain.zombies.add(zombie);
-    chain.lastZombiePosition = new vec2(zombie.pos.x, zombie.pos.y); // Update last known position
-}
 export class DeadlyDangler extends Zombie {
     constructor(pos) {
         super(pos); // Call the parent class constructor first
@@ -504,33 +499,7 @@ export class DeadlyDangler extends Zombie {
         this.movementSpeed = 0.02; // Speed of movement toward the player
         this.randomFactors = this.generateRandomFactors(); // Random factors for each tendril
     }
-    catchFire() {
-        if (!this.onFire && !this.isDead) { // Only catch fire if not already on fire and not dead
-            this.onFire = true;
-            this.fireEmitter = makeFire(this.pos); // Start the fire effect immediately
-            this.fireSpreadTimer = 2; // Fire spread timer set for 2 seconds
 
-            // Increment score and currency when the zombie catches fire
-            incrementScore(1);
-            addCurrency(1);
-
-            // Add to the nearest combo chain or start a new one
-            const nearestChain = findNearestChain(this);
-            if (nearestChain) {
-                addToComboChain(nearestChain, this);
-            } else {
-                startComboChain(this);
-            }
-
-            // Adjust behavior if needed (e.g., stop movement)
-            this.speed = 0; // Stop the zombie from moving when it's on fire
-
-            // Start fade out process when fire spreading is done
-            setTimeout(() => {
-                this.startFadeOut();
-            }, this.fireSpreadTimer * 1000); // Start fade out after fire spread time
-        }
-    }
     generateRandomFactors() {
         // Generate random factors for each tendril's oscillation
         const randomFactors = [];
@@ -557,15 +526,17 @@ export class DeadlyDangler extends Zombie {
         // Fire handling for DeadlyDangler
         if (this.onFire && !this.isDead) {
             this.isDead = true;
+            const nearestChain = findNearestChain(this);
+            nearestChain ? nearestChain.zombies.add(this) : startComboChain(this);
             this.fireEmitter = makeFire(this.pos);
-
-            gameSettings.zombies.forEach(otherZombie => {
-                if (!otherZombie.isDead && this.pos.distance(otherZombie.pos) < 1 && !otherZombie.onFire) {
-                    otherZombie.onFire = true;
+            if (this.fadeOutTimer > 0) {
+                this.fadeOutTimer -= 1 / 60;
+                if (this.fadeOutTimer <= 0) {
+                    this.deathTimer = 0;
+                    if (this.fireEmitter) this.fireEmitter.emitRate = 0;
                 }
-            });
+            }
 
-            this.startFadeOut();
         }
 
         // If not dead, update movement and tendrils
@@ -579,6 +550,7 @@ export class DeadlyDangler extends Zombie {
             // Check for collision with tendrils
             if (this.checkTendrilCollision(player.pos)) {
                 setGameOver(true); // Player is caught by the deadly tendrils
+                
             }
         } else {
             // Handle fade-out if dead
@@ -684,7 +656,7 @@ export class DeadlyDangler extends Zombie {
 
         // Determine the body color
         let color;
-        if (this.isDead) {
+        if (this.isDead ) {
             if (this.onFire) {
                 color = hsl(0.1, 1, 0.5, opacity); // Burning color (orange) if on fire
             } else {
@@ -741,7 +713,7 @@ export class DeadlyDangler extends Zombie {
     // Helper function to determine the tendril color based on the DeadlyDangler's state
     getTendrilColor(opacity) {
         if (this.isDead) {
-            return this.onFire ? hsl(0.1, 1, 0.5, opacity) : hsl(0, 0, 0.2, opacity);
+            return this.onFire ? hsl(0.1, 1, 0.5, opacity) : hsl(0, 0, 0.2, opacity); // Burning color if on fire when dead or grey if not
         }
         return this.onFire ? hsl(0.1, 1, 0.5, opacity) : hsl(0, 1, 0.5, opacity);
     }
