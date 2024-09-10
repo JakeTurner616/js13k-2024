@@ -12,7 +12,7 @@ import { JoyStick } from './libs/joystick.js';
 
 let mapCanvas = document.getElementById('mapCanvas');
 let zombiesSpawned = 0; // Track how many zombies have been spawned
-const DANGER_THRESHOLD = 1; // Number of zombies to spawn before allowing Deadly Danglers, bosses and increasing speed
+const DANGER_THRESHOLD = 13; // Number of zombies to spawn before allowing Deadly Danglers, bosses and increasing speed
 let isWindowFocused = true; // Flag to check if window is focused
 // Combo message state
 let comboMessage = {
@@ -289,11 +289,11 @@ function spawnZombie() {
 
     const pos = edges[Math.floor(Math.random() * 4)];
 
-    if (Math.random() < 0.09 && zombiesSpawned >= DANGER_THRESHOLD && getScore() > DANGER_THRESHOLD) { // Spawn a boss zombie with a 9% chance after DANGER_THRESHOLD zombies spawned and score > DANGER_THRESHOLD
+    if (Math.random() < 0.07 && zombiesSpawned >= DANGER_THRESHOLD * 2) { // Spawn a boss zombie with a 7% chance after DANGER_THRESHOLD zombies spawned and zpmbiesSpawned >= 26
         spawnBossZombie(pos);
     }
 
-    const zombieType = Math.random() < 0.15
+    const zombieType = Math.random() < 0.15 // 15% chance to spawn a Boomer
         ? Boomer
         : (Math.random() < 0.2 && zombiesSpawned >= DANGER_THRESHOLD)
             ? DeadlyDangler
