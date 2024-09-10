@@ -37,7 +37,9 @@ window.addEventListener('blur', () => {
     isWindowFocused = false;
     setPaused(true);
 });
-
+window.addEventListener('orientationchange', function() {
+    location.reload();  // Refresh the page when the device orientation changes
+});
 
 export const gameSettings = {
     zombieSpeed: 0.025, // Starting speed
@@ -61,10 +63,10 @@ var joystick1;
 function gameInit() {
     // Create a common style object for joystick containers
     const joystickStyle = {
-        width: '260px',
-        height: '260px',
+        width: '25vw',
+        height: '25vw',
         position: 'absolute',
-        bottom: '20px'
+        bottom: '4vh'
     };
 
     // Function to apply the style to a joystick container

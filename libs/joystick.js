@@ -36,13 +36,13 @@
  */
 export let StickStatus = { x: 0, y: 0 };
 export let StickStatus2 = { x: 0, y: 0 };
-const color = "rgba(0, 170, 0, 0.5)";
+const color = "rgba(0, 170, 0, 0.3)";
 export class JoyStick {
     constructor(container, parameters = {}, callback = () => {}) {
         this.title = parameters.title || "joystick";
         this.internalFillColor = color;
         this.internalLineWidth = 2;
-        this.externalLineWidth = 2;
+        this.externalLineWidth = 3;
         this.externalStrokeColor = color;
 
         this.callback = callback;
@@ -61,7 +61,7 @@ export class JoyStick {
         this.pressed = 0;
         this.internalRadius = (this.canvas.width - ((this.canvas.width / 2) + 10)) / 2;
         this.maxMoveStick = this.internalRadius + 5;
-        this.externalRadius = this.internalRadius + 30;
+        this.externalRadius = this.internalRadius + 50;
         this.centerX = this.canvas.width / 2;
         this.centerY = this.canvas.height / 2;
         this.movedX = this.centerX;
