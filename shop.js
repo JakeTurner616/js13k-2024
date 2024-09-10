@@ -9,11 +9,11 @@ export function isInShop() {
     return inShop;
 }
 
-// Updated items list with the Pistol with 10, 45, 75, 100 beep thresholds
+// Updated items list with the Pistol with 10, 35, 60, 100 beep thresholds
 export const items = [
     { name: 'Pistol', cost: 10, purchased: false },
-    { name: 'SMG', cost: 45, purchased: false }, // renamed Machine Gun to SMG
-    { name: 'Shotgun', cost: 75, purchased: false },
+    { name: 'SMG', cost: 35, purchased: false }, // renamed Machine Gun to SMG
+    { name: 'Shotgun', cost: 60, purchased: false },
     { name: 'Fire Ability', cost: 100, purchased: false },
 ];
 

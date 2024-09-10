@@ -40,12 +40,12 @@ window.addEventListener('blur', () => {
 
 
 export const gameSettings = {
-    zombieSpeed: 0.020, // Starting speed
+    zombieSpeed: 0.025, // Starting speed
     spawnRate: 1200, // Initial spawn rate in milliseconds
     minSpawnRate: 500, // Minimum spawn rate cap
     spawnRateDecrement: 50, // Decrease spawn rate by 50ms every interval
-    speedIncrement: 0.001, // Speed increase per zombie spawn or score threshold
-    maxZombieSpeed: 0.1, // Maximum zombie speed cap about 4x the starting speed
+    speedIncrement: 0.002, // Speed increase per zombie spawn or score threshold, 
+    maxZombieSpeed: 0.1, // Maximum zombie speed cap 
     zombies: [],
     bullets: [],
     mapCanvas: document.getElementById('mapCanvas'),
@@ -215,7 +215,7 @@ function gameRender() {
 
 
 let beepedCurrencyLevels = []; // Array to track currency levels that triggered the beep
-const beepThresholds = [10, 45, 75, 100];
+const beepThresholds = [10, 35, 60, 100];
 
 function gameRenderPost() {
     if (!gameState.gameOver) {
@@ -253,7 +253,6 @@ function gameRenderPost() {
 export function showComboMessage(comboCount, position) {
     const positionVec = position instanceof vec2 ? position : new vec2(Math.floor(position.x), Math.floor(position.y));
 
-    //console.log('Drawing combo message from main.js: ' + comboCount + ' at ', positionVec);
 
     comboMessage.text = `X${comboCount}!`;
     comboMessage.position = positionVec;
@@ -265,13 +264,13 @@ export function showComboMessage(comboCount, position) {
 }
 
 function spawnBossZombie(position) {
+    const bodycolor = hsl(0.6, 1, 0.5); // Set the body color for the BossZombie to a dark red
     // Create a new BossZombie instance
-    const bossZombie = new BossZombie(position);
+    const bossZombie = new BossZombie(position, bodycolor);
 
     // Add the BossZombie to the zombies array in gameSettings
     gameSettings.zombies.push(bossZombie);
 
-    //console.log('BossZombie spawned at position:', position);
 }
 
 function spawnZombie() {
@@ -288,8 +287,7 @@ function spawnZombie() {
     ];
 
     const pos = edges[Math.floor(Math.random() * 4)];
-
-    if (Math.random() < 0.07 && zombiesSpawned >= DANGER_THRESHOLD * 2) { // Spawn a boss zombie with a 7% chance after DANGER_THRESHOLD zombies spawned and zpmbiesSpawned >= 26
+    if (Math.random() < 0.08 && zombiesSpawned >= DANGER_THRESHOLD * 2 && player.weapon !== 'Bat') { // Spawn a boss zombie with a 7% chance after DANGER_THRESHOLD zombies spawned and zpmbiesSpawned >= 26 AND player does not have the bat
         spawnBossZombie(pos);
     }
 
@@ -299,8 +297,9 @@ function spawnZombie() {
             ? DeadlyDangler
             : Zombie;
 
-    // Adjust zombie speed and spawn rate every DANGER_THRESHOLD zombies
-    if (zombiesSpawned % DANGER_THRESHOLD === 0) {
+    // Adjust zombie speed and spawn rate every 3 zombies
+    if (zombiesSpawned % 4 === 0) {
+        console.log('Speed and spawn rate adjusted');
         gameSettings.zombieSpeed = Math.min(gameSettings.zombieSpeed + gameSettings.speedIncrement, gameSettings.maxZombieSpeed);
         gameSettings.spawnRate = Math.max(gameSettings.spawnRate - gameSettings.spawnRateDecrement, gameSettings.minSpawnRate);
     }

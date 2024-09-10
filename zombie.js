@@ -218,7 +218,7 @@ export class Zombie {
 export class Boomer extends Zombie {
     constructor(pos) {
         super(pos);
-        this.speed = gameSettings.zombieSpeed - 0.005;
+        this.speed = gameSettings.zombieSpeed; // remove boomer speed handicap as it causes foot traffic congestion between the zombies!
         this.exploding = false;
         this.bloodEmitter = null;
         this.explosionEmitter = null;
@@ -624,6 +624,7 @@ export class DeadlyDangler extends Zombie {
         // Determine the body color
         let color;
         if (this.isDead ) {
+            console.log(this.isDead);
             if (this.onFire) {
                 color = hsl(0.1, 1, 0.5, opacity); // Burning color (orange) if on fire
             } else {
@@ -633,7 +634,7 @@ export class DeadlyDangler extends Zombie {
             color = hsl(0.1, 1, 0.5, opacity); // Burning color (orange) if on fire and alive
         }
         
-        else {
+        else if (!this.isDead) {
             color = hsl(0.3, 1, 0.5, opacity); // Normal color (green) when alive and not on fire
         }
 

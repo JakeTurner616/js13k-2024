@@ -219,7 +219,7 @@ export class Player {
 
 
     shoot() {
-        if (isInShop() || this.isReloading || !this.hasGun() || (isTouchDevice && StickStatus2.x == 0 && StickStatus2.y == 0)) return;
+        if (isInShop() || this.isReloading || this.weapon == 'Bat' || (isTouchDevice && StickStatus2.x == 0 && StickStatus2.y == 0)) return;
     
         const currentTime = performance.now();
         const weaponDelay = this.getWeaponDelay();
@@ -547,7 +547,5 @@ export class Player {
 
     }
 
-    hasGun() {
-        return this.items.includes('Shotgun') || this.items.includes('SMG') || this.items.includes('Pistol');
-    }
+
 }

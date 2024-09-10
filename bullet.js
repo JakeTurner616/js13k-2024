@@ -1,11 +1,10 @@
 import { vec2, mainCanvas, drawRect, hsl, cameraScale } from './libs/littlejs.esm.min.js';
-import { gameSettings, startSpawningZombies, stopSpawningZombies } from './main.js';
+import { gameSettings } from './main.js';
 import { sound_hit, sound_fire } from './sound.js';
 import { makeBlood } from './effects.js';
 import { setGameOver } from './zombie.js';
 import { BossZombie } from './boss.js';
 
-let killCount = 0;
 let scorecnt = 0; // Private variable for score
 
 // Getter for score
@@ -51,13 +50,6 @@ export class Bullet {
     update() {
         if (setGameOver(false)) return; // Assuming setGameOver() also returns the current gameOver state
 
-        if (killCount >= 10) {
-            gameSettings.zombieSpeed += 0.005;
-            gameSettings.spawnRate = Math.max(500, gameSettings.spawnRate - 50);
-            killCount = 0;
-            stopSpawningZombies();
-            startSpawningZombies();
-        }
 
         // Move bullet in the calculated direction
         this.pos = this.pos.add(this.direction.scale(this.speed));
@@ -73,11 +65,10 @@ export class Bullet {
                         zombie.catchFire(); // Set zombie on fire and play fire effect
                         sound_fire.play(this.pos);
                     } else {
-
+                        zombie.takeHit(10); // Apply damage (e.g., 10 points of damage)
 
                         if (zombie.isDead) {
                             // If BossZombie's health reaches zero after the hit
-                            killCount++;
                             incrementScore(); // Increment score when the BossZombie dies
                             addCurrency(5); // Increase currency using the setter when the BossZombie dies
                         }
@@ -111,7 +102,6 @@ export class Bullet {
                     sound_fire.play(this.pos);
                 } else {
                     zombie.isDead = true;
-                    killCount++;
                     incrementScore(); // Increment the score using the function
                     addCurrency(1); // Increase currency using the setter
                 }

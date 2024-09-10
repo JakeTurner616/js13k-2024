@@ -205,13 +205,13 @@ export class BossZombie extends Zombie {
         let opacity = 1;
 
         if (this.isDead) {
-            bodyColor = hsl(0, 0, 0.5, opacity);
-            legColor = hsl(0, 0, 0.5, opacity);
+            bodyColor = hsl(0, 0, 0.2, opacity);
+            legColor = hsl(0, 0, 0.2, opacity);
 
             if (this.isFadingOut) {
                 opacity = this.fadeOutTimer / 4;
-                bodyColor = hsl(0, 0, 0.5, opacity);
-                legColor = hsl(0, 0, 0.5, opacity);
+                bodyColor = hsl(0, 0, 0.2, opacity);
+                legColor = hsl(0, 0, 0.2, opacity);
                 this.fadeOutTimer -= 1 / 60;
 
                 if (this.fadeOutTimer <= 0) {
