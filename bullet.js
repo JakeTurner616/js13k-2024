@@ -73,7 +73,7 @@ export class Bullet {
                         zombie.catchFire(); // Set zombie on fire and play fire effect
                         sound_fire.play(this.pos);
                     } else {
-                        zombie.takeHit(10); // Apply damage (e.g., 10 points of damage)
+
 
                         if (zombie.isDead) {
                             // If BossZombie's health reaches zero after the hit

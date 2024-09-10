@@ -208,7 +208,9 @@ export class Player {
                     //console.log("Boomer hit by melee!"); // Debug message
                 } else {
                     //console.log("Zombie hit by melee!"); // Debug message
+                    zombie.deathTimer = 3;
                     zombie.kill(); // Generic kill for other zombie types
+                    
                 }
             }
         });
@@ -529,6 +531,7 @@ export class Player {
                     if (zombie instanceof Boomer) {
                         zombie.boomerHitByBat();// Boomer-specific reaction to being hit
                     } else {
+                        zombie.deathTimer = 3; // Set death timer to 3 seconds. important for on death fade out logic
                         zombie.kill(); // Generic kill for other zombie types
                     }
                 }
